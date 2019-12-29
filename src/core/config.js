@@ -1,6 +1,6 @@
 /*2019-12-22 13:43:43*/
-import { no, noop, identity } from './shared/util.js'
-import { LIFECYCLE_HOOKS } from "./shared/constants.js"
+import { no, noop, identity } from '../shared/util.js'
+import { LIFECYCLE_HOOKS } from "../shared/constants.js"
 
 const process = {
   env: {

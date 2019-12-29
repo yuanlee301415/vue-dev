@@ -1,0 +1,8 @@
+{
+  "name": "dev-vue",
+  "version": "0.0.1",
+  "description": "Vue-2.5.17 源码学习",
+  "scripts": {
+    "dev": "live-server ./ --port=8000 --no-browser"
+  }
+}

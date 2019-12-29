@@ -1,8 +1,7 @@
 import Dep from "./dep.js"
 import VNode from '../vdom/vnode.js'
 import { arrayMethods } from "./array.js"
-import { def, isObject, hasOwn, hasProto, isPlainObject } from "../util/index.js"
-import { isValidArrayIndex, isServerRendering } from "../util/index.js"
+import { def, isObject, hasOwn, hasProto, isPlainObject, isValidArrayIndex, isServerRendering } from "../util/index.js"
 
 const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
 const observeState = {

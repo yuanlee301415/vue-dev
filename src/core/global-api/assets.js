@@ -1,6 +1,6 @@
 /*2019-12-22 21:1:45*/
 import config from "../config.js"
-import { ASSET_TYPES } from "../shared/constants.js"
+import { ASSET_TYPES } from "../../shared/constants.js"
 import { isPlainObject } from '../util/index.js'
 
 function initAssetRegisters(Vue) {

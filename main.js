@@ -1,12 +1,13 @@
-import Vue from './index.js'
+import Vue from './src/core/index.js'
 
-const GlobalComp = Vue.component('Test', {
+const GlobalComp = Vue.component('GlobalComp', {
   props: {
     title: String
   },
-  template: '<h1>GlobalComp-Title is ${title}</h1>'
+  template: '<h1>GlobalComp-Title is {{ title }}</h1>'
 })
-const Local = {
+const LocalComp = {
+  name: 'LocalComp',
   props: {
     title: String
   },
@@ -15,15 +16,26 @@ const Local = {
 
 const app = new Vue({
   el: '#app',
+  components: {
+    GlobalComp
+  },
   template: `<div id="test">
+Time: {{ time }}
 <global-comp title="Global"/>
-<local-comp title="Local"/>
 </div>`,
   data: {
-    name: 'Tom'
+    time: new Date()
   },
   created () {
-    console.log('created')
+    console.warn('created')
+    this.interval()
+  },
+  methods: {
+    interval () {
+      setInterval(() => {
+        this.time = new Date()
+      }, 1000)
+    }
   }
 })
 
@@ -33,4 +45,3 @@ console.dir(Vue)
 
 console.warn('app')
 console.dir(app)
-

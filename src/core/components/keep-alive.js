@@ -1,4 +1,4 @@
-import { isRegExp, remove } from '../shared/util.js'
+import { isRegExp, remove } from '../../shared/util.js'
 import { getFirstComponentChild } from '../vdom/helpers/index.js'
 
 function getComponentName(opts) {

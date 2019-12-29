@@ -1,5 +1,5 @@
 /*2019-12-22 20:59:28*/
-import { ASSET_TYPES } from "../shared/constants.js"
+import { ASSET_TYPES } from "../../shared/constants.js"
 import { extend, mergeOptions } from "../util/index.js"
 import { defineComputed, proxy } from '../instance/state.js'
 

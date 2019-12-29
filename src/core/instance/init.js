@@ -2,7 +2,7 @@ import { initState } from './state.js'
 import { initRender } from "./render.js"
 import { initEvents } from "./events.js"
 import { initLifecycle, callHook } from "./lifecycle.js"
-import { initProvide, initInjections } from '../instance/inject.js'
+import { initProvide, initInjections } from './inject.js'
 import { extend, mergeOptions } from "../util/index.js"
 
 let uid = 0

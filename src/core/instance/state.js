@@ -1,7 +1,7 @@
 import config from "../config.js"
 import Dep from '../observer/dep.js'
 import Watcher from '../observer/Watcher.js'
-import { isUpdatingChildComponent } from '../instance/lifecycle.js'
+import { isUpdatingChildComponent } from './lifecycle.js'
 
 import {
   set,

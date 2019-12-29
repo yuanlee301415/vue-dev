@@ -4,7 +4,7 @@ import { initMixin } from './mixin.js'
 import { initExtend } from './extend.js'
 import { initAssetRegisters } from './assets.js'
 import { set, del } from '../observer/index.js'
-import { ASSET_TYPES} from "../shared/constants.js"
+import { ASSET_TYPES} from "../../shared/constants.js"
 import builtInComponents from '../components/index.js'
 import { extend, nextTick, mergeOptions, defineReactive } from "../util/index.js"
 

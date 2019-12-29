@@ -1,5 +1,5 @@
-import parse from './parser/index.js'
-import generate from './codegen/index.js'
+import parse from './parser'
+import generate from './codegen'
 
 export const createCompiler = function (template, options) {
   const ast = parse(template.trim(), options)

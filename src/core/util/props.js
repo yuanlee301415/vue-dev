@@ -8,7 +8,7 @@ import {
   capitalize,
   isPlainObject,
   isObject
-} from '../util/index.js'
+} from './index.js'
 
 function validateProp(key, propOptions, propsData, vm) {
   /*2019-12-27 21:16:35*/

@@ -1,5 +1,5 @@
 
-import { noop } from '../util/index.js'
+import { noop } from './index.js'
 
 let formatComponentName = noop
 

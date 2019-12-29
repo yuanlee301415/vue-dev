@@ -1,5 +1,5 @@
 import config from "../config.js"
-import { hasOwn, camelize, capitalize, isPlainObject, extend, toRawType } from "../util/index.js"
+import { hasOwn, camelize, capitalize, isPlainObject, extend, toRawType } from "./index.js"
 
 const starts = config.optionMergeStrategies
 const defaultStatus = function (parentVal, childVal) {

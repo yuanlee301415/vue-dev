@@ -1,4 +1,4 @@
-export * from '../shared/util.js'
+export * from '../../shared/util.js'
 export * from './next-tick.js'
 export * from './lang.js'
 export * from './options.js'

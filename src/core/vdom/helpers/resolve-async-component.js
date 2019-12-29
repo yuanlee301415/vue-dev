@@ -1,6 +1,5 @@
 import { createEmptyVNode } from "../vnode.js"
-import { isDef, isObject, isTrue, isUnDef, once } from "../../util/index.js"
-import { hasSymbol } from "../../util/index.js"
+import { isDef, isObject, isTrue, isUnDef, once, hasSymbol } from "../../util/index.js"
 
 function resolveAsyncComponent(factory, baseCtor, context) {
   /*2019-12-25 21:11:23*/

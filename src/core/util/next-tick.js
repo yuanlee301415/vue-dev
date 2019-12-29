@@ -1,5 +1,5 @@
 /*2019-12-22 20:22:17*/
-import { noop } from '../shared/util.js'
+import { noop } from '../../shared/util.js'
 import { isIOS, isNative } from './env.js'
 
 const callbacks = []
