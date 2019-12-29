@@ -1,3 +1,4 @@
+/*2019-12-29 18:16:21*/
 import config from "../config.js"
 import Watcher from "../observer/Watcher.js"
 import { mark, measure } from '../util/perf.js'
@@ -96,7 +97,34 @@ function lifecycleMixin(Vue) {
   console.log('Vue.prototype.destroy')
 }
 
+function initLifecycle(vm) {
+  /*2019-12-22 22:3:9*/
+  console.info('>>initLifecycle')
+  const options = vm.$options
+  let parent = options.parent
+  if (parent && !options.abstract) {
+    while(parent.$options.abstract && parent.$parent) {
+      parent = parent.$parent
+    }
+    parent.$children.push(vm)
+  }
+
+  vm.$parent = parent
+  vm.$root = parent ? parent.$root : vm
+  vm.$children = []
+  vm.$refs = {}
+
+  vm._watcher = null
+  vm._inactive = null
+  vm._directInactive = false
+  vm._isMounted = false
+  vm._isDestroyed = false
+  vm._isBeingDestroyed = false
+  console.log('init>this.$parent/$root/$children/$refs/_watcher/_inactive/_directInactive/_isMounted/_isDestroyed/_isBeingDestroyed')
+}
+
 function mountComponent(vm, el, hydrating) {
+  /*2019-12-29 18:12:23*/
   vm.$el = el
   if (!vm.$options.render) {
     vm.$options.render = createEmptyVNode
@@ -151,78 +179,13 @@ function mountComponent(vm, el, hydrating) {
   return vm
 }
 
-function initLifecycle(vm) {
-  /*2019-12-22 22:3:9*/
-  console.info('>>initLifecycle')
-  const options = vm.$options
-  let parent = options.parent
-  if (parent && !options.abstract) {
-    while(parent.$options.abstract && parent.$parent) {
-      parent = parent.$parent
-    }
-    parent.$children.push(vm)
-  }
-
-  vm.$parent = parent
-  vm.$root = parent ? parent.$root : vm
-  vm.$children = []
-  vm.$refs = {}
-
-  vm._watcher = null
-  vm._inactive = null
-  vm._directInactive = false
-  vm._isMounted = false
-  vm._isDestroyed = false
-  vm._isBeingDestroyed = false
-  console.log('init>this.$parent/$root/$children/$refs/_watcher/_inactive/_directInactive/_isMounted/_isDestroyed/_isBeingDestroyed')
-}
-
-function callHook(vm, hook) {
-  /*2019-12-23 20:22:51*/
-  const handlers = vm.$options[hook]
-  if (handlers) {
-    for (let i = 0, l = handlers.length; i < l; i++) {
-      try {
-        handlers[i].call(vm)
-      } catch (e) {
-        console.error(e, vm, `${hook} hook`)
-      }
-    }
-  }
-  vm._hasHookEvent && vm.$emit(`hook:${hook}`)
-}
-
-function isInInactiveTree(vm) {
-  /*2019-12-27 20:19:47*/
-  while(vm && (vm = vm.$parent)) {
-    if (vm._inactive) return true
-  }
-  return false
-}
-
-function activateChildComponent(vm, direct) {
-  /*2019-12-27 20:19:40*/
-  if (direct) {
-    vm._directInactive = false
-    if (isInInactiveTree(vm)) return
-  } else if (vm._directInactive) return
-
-  if (vm._inactive || vm._inactive === null) {
-    vm._inactive = false
-    for (let i = 0; i < vm.$children.length; i++) {
-      activateChildComponent(vm.$children[i])
-    }
-    callHook(vm, 'activated')
-  }
-}
-
 function updateChildComponent(vm, propsData, listeners, parentVnode, renderChildren) {
   /*2019-12-26 21:29:6*/
   const hasChildren = !!(
     renderChildren || // has new static slots
-      vm.$options._renderChildren || // has old static slots
-      parentVnode.data.scopedSlots || // has new scoped slots
-      vm.$scopedSlots !== emptyObject // has old scoped slots
+    vm.$options._renderChildren || // has old static slots
+    parentVnode.data.scopedSlots || // has new scoped slots
+    vm.$scopedSlots !== emptyObject // has old scoped slots
   )
 
   vm.$options._parentVnode = parentVnode
@@ -259,6 +222,30 @@ function updateChildComponent(vm, propsData, listeners, parentVnode, renderChild
   }
 }
 
+function isInInactiveTree(vm) {
+  /*2019-12-27 20:19:47*/
+  while(vm && (vm = vm.$parent)) {
+    if (vm._inactive) return true
+  }
+  return false
+}
+
+function activateChildComponent(vm, direct) {
+  /*2019-12-27 20:19:40*/
+  if (direct) {
+    vm._directInactive = false
+    if (isInInactiveTree(vm)) return
+  } else if (vm._directInactive) return
+
+  if (vm._inactive || vm._inactive === null) {
+    vm._inactive = false
+    for (let i = 0; i < vm.$children.length; i++) {
+      activateChildComponent(vm.$children[i])
+    }
+    callHook(vm, 'activated')
+  }
+}
+
 function deactivateChildComponent(vm, direct) {
   /*2019-12-27 20:19:17*/
   if (direct) {
@@ -274,15 +261,30 @@ function deactivateChildComponent(vm, direct) {
   }
 }
 
+function callHook(vm, hook) {
+  /*2019-12-23 20:22:51*/
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    for (let i = 0, l = handlers.length; i < l; i++) {
+      try {
+        handlers[i].call(vm)
+      } catch (e) {
+        console.error(e, vm, `${hook} hook`)
+      }
+    }
+  }
+  vm._hasHookEvent && vm.$emit(`hook:${hook}`)
+}
 
 export {
-  lifecycleMixin,
-  initLifecycle,
-  callHook,
   activeInstance,
   isUpdatingChildComponent,
+  initLifecycle,
+  lifecycleMixin,
+  mountComponent,
   updateChildComponent,
+  isInInactiveTree,
   activateChildComponent,
   deactivateChildComponent,
-  mountComponent
+  callHook
 }
