@@ -4,4 +4,16 @@ import { extend, noop } from "../../../shared/util.js"
 import { mountComponent } from '../../../core/instance/lifecycle.js'
 import { devtools, inBrowser, isChrome } from "../../../core/util/index.js"
 
+import {
+  query,
+  mustUseProp,
+  isReservedTag,
+  isReservedAttr,
+  getTagNamespace,
+  isUnknownElement
+} from "../util/index.js"
+
+import { patch } from './patch.js'
+
+
 export default Vue
