@@ -105,7 +105,7 @@ function wrapFilter(exp, filter) {
   } else {
     const name = filter.slice(0, i)
     const args = filter.slice(i + 1)
-    return `_f("${name}")(${exp}${args !== ')' ? ',' + args: args}`
+    return `_f("${name}")(${exp},${args}`
   }
 }
 

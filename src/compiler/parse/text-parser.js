@@ -1,6 +1,6 @@
-/*2019-12-29 17:42:41*/
+/*2019-12-29 18:30:35*/
 import { cached } from "../../shared/util.js"
-import { parseFilters } from './filter-parse.js'
+import { parseFilters } from './filter-parser.js'
 
 const defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g
 const regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g
@@ -14,32 +14,26 @@ const buildRegex = cached(delimiters => {
 function parseText(text, delimiters) {
   const tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE
   if (!tagRE.test(text)) return
+
   const tokens = []
-  const rawTokens = []
   let lastIndex = tagRE.lastIndex = 0
-  let match, index, tokenValue
+  let match, index
 
   while ((match = tagRE.exec(text))) {
     index = match.index
     // push text token
     if (index > lastIndex) {
-      rawTokens.push(tokenValue = text.slice(lastIndex, index))
-      tokens.push(JSON.stringify(tokenValue))
+      tokens.push(JSON.stringify(text.slice(lastIndex, index)))
     }
     // tag token
     const exp = parseFilters(match[1].trim())
     tokens.push(`_s(${exp})`)
-    rawTokens.push({ '@binding': exp })
     lastIndex = index + match[0].length
   }
   if (lastIndex < text.length) {
-    rawTokens.push(tokenValue = text.slice(lastIndex))
-    tokens.push(JSON.stringify(tokenValue))
+    tokens.push(JSON.stringify(text.slice(lastIndex)))
   }
-  return {
-   expression: tokens.join('+'),
-   tokens: rawTokens
-  }
+  return tokens.join('+')
 }
 
 export {
