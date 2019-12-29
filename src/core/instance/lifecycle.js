@@ -1,7 +1,11 @@
-import { remove, emptyObject, validateProp } from "../util/index.js"
+import config from "../config.js"
+import Watcher from "../observer/Watcher.js"
+import { mark, measure } from '../util/perf.js'
+import { createEmptyVNode } from "../vdom/vnode.js"
+import { observeState } from "../observer/index.js"
 import { updateComponentListeners } from "./events.js"
 import { resolveSlots } from "./render-helpers/resolve-slots.js"
-import { observeState } from "../observer/index.js"
+import { noop, remove, emptyObject, validateProp } from "../util/index.js"
 
 let activeInstance = null
 let isUpdatingChildComponent = false
@@ -90,6 +94,61 @@ function lifecycleMixin(Vue) {
     }
   }
   console.log('Vue.prototype.destroy')
+}
+
+function mountComponent(vm, el, hydrating) {
+  vm.$el = el
+  if (!vm.$options.render) {
+    vm.$options.render = createEmptyVNode
+    if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') || vm.$options.el || el) {
+      console.warn(
+        'You are using the runtime-only build of Vue where the template ' +
+        'compiler is not available. Either pre-compile the templates into ' +
+        'render functions, or use the compiler-included build.',
+        vm
+      )
+    } else {
+      console.warn(
+        'Failed to mount component: template or render function not defined.',
+        vm
+      )
+    }
+  }
+
+  callHook(vm, 'beforeMount')
+
+  let updateComponent
+  if (config.performance && mark) {
+    updateComponent = () => {
+      const name = vm._name
+      const id = vm._uid
+      const startTag = `vue-perf-start:${id}`
+      const endTag = `vue-perf-end:${id}`
+
+      mark(startTag)
+      const vnode = vm._render()
+      mark(endTag)
+      measure(`vue ${name} patch`, startTag, endTag)
+
+      mark(startTag)
+      vm._update(vnode, hydrating)
+      mark(endTag)
+      measure(`vue ${name} patch`, startTag, endTag)
+    }
+  } else {
+    updateComponent = () => {
+      vm._update(vm._render(), hydrating)
+    }
+  }
+
+  vm._watcher = new Watcher(vm, updateComponent, noop, null, true)
+  hydrating = false
+
+  if (vm.$vnode == null) {
+    vm._isMounted = true
+    callHook(vm, 'mounted')
+  }
+  return vm
 }
 
 function initLifecycle(vm) {
@@ -224,5 +283,6 @@ export {
   isUpdatingChildComponent,
   updateChildComponent,
   activateChildComponent,
-  deactivateChildComponent
+  deactivateChildComponent,
+  mountComponent
 }
