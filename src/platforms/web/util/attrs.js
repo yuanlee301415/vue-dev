@@ -36,6 +36,7 @@ const getXlinkProp = name => {
 const isFalsyAttrValue = val => {
   return val == null || val === false
 }
+
 export {
   isReservedAttr,
   mustUseProp,
