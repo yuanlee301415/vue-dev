@@ -1,3 +1,4 @@
+/*2019-12-30 21:26:8*/
 import VNode from "./vnode.js"
 import config from "../config.js"
 import { SSR_ATTR } from "../../shared/constants.js"
@@ -466,9 +467,188 @@ function createPatchFunction(backend) {
     }
   }
 
+  function invokeInsertHook(vnode, queue, initial) {
+    if (isTrue(initial) && isDef(vnode.parent)) {
+      vnode.parent.data.pendingInsert = queue
+    } else {
+      for (let i = 0; i < queue.length; i++) {
+        queue[i].data.hook.insert(queue[i])
+      }
+    }
+  }
 
 
+  let bailed = false
+  const isRenderedModule = makeMap('attrs,style,class,staticClass,staticStyle,key')
 
+  function hydrate(elm, vnode, insertedVnodeQueue) {
+    if (isTrue(vnode.isComment) && isDef(vnode.asyncFactory)) {
+      vnode.elm = elm
+      vnode.isAsyncPlaceholder = true
+      return true
+    }
+
+    if (!assertNodeMatch(elm, vnode)) return false
+
+    vnode.elm = elm
+    const { tag, data, children } = vnode
+    if (isDef(data)) {
+      if (isDef(i = data.hook) && isDef(i = i.init)) i(vnode, true)
+      if (isDef(i = vnode.componentInstance)) {
+        initComponent(vnode, insertedVnodeQueue)
+        return true
+      }
+    }
+
+    if (isDef(tag)) {
+      if (isDef(children)) {
+        if (!elm.hasChildNodes()) {
+          createChildren(vnode, children, insertedVnodeQueue)
+        } else {
+          if (isDef(i = data) && isDef(i = i.domProps) && isDef(i = i.innerHTML)) {
+            if (i !== elm.innerHTML) {
+              if (!bailed) {
+                bailed = true
+                console.warn('Parent: ', elm)
+                console.warn('server innerHTML: ', i)
+                console.warn('client innerHTML: ', elm.innerHTML)
+              }
+              return false
+            }
+          } else {
+            let childrenMatch = true
+            let childNode = elm.firstChild
+            for (let i = 0; i < children.length; i++) {
+              if (!childNode && !hydrate(children, children[i], insertedVnodeQueue)) {
+                childrenMatch = false
+                break
+              }
+              childNode = childNode.nextSibling
+            }
+
+            if (!childrenMatch || childNode) {
+              if (!bailed) {
+                bailed = true
+                console.warn('Parent: ', elm)
+                console.warn('Mismatching childNodes vs. VNodes: ', elm.childNodes, children)
+              }
+              return false
+            }
+          }
+        }
+      }
+
+      if (isDef(data)) {
+        for (const key in data) {
+          if (!isRenderedModule(key)) {
+            invokeCreateHooks(vnode, insertedVnodeQueue)
+            break
+          }
+        }
+      }
+    } else if (elm.data !== vnode.text) {
+      elm.data = vnode.text
+    }
+    return true
+  }
+
+  function assertNodeMatch(node, vnode) {
+    if (isDef(vnode.tag)) {
+      return (
+        vnode.tag.indexOf('vue-component') === 0 ||
+          vnode.tag.toLowerCase() === (node.tagName && node.tagName.toLowerCase())
+      )
+    } else {
+      return node.nodeType === (vnode.isComment ? 8 : 3)
+    }
+  }
+
+  return function patch(oldVnode, vnode, hydrating, removeOnly, parentElm, refElm) {
+    if (isUnDef(vnode)) {
+      if (isDef(oldVnode)) invokeDestroyHook(oldVnode)
+      return
+    }
+
+    let isInitialPatch = false
+    const insertedVnodeQueue = []
+
+    if (isUnDef(oldVnode)) {
+      isInitialPatch = true
+      createElm(vnode, insertedVnodeQueue, parentElm, refElm)
+    } else {
+      const isRealElement = isDef(oldVnode.nodeType)
+      if (!isRealElement && sameVnode(oldVnode, vnode)) {
+        patchVnode(oldVnode, vnode, insertedVnodeQueue, removeOnly)
+      } else {
+        if (isRealElement) {
+          if (oldVnode.nodeType === 1 && oldVnode.hasAttribute(SSR_ATTR)) {
+            oldVnode.removeAttribute(SSR_ATTR)
+            hydrating = true
+          }
+          if (isTrue(hydrating)) {
+            if (hydrate(oldVnode, vnode, insertedVnodeQueue)) {
+              invokeInsertHook(vnode, insertedVnodeQueue, true)
+              return oldVnode
+            } else {
+              console.warn(
+                'The client-side rendered virtual DOM tree is not matching ' +
+                'server-rendered content. This is likely caused by incorrect ' +
+                'HTML markup, for example nesting block-level elements inside ' +
+                '<p>, or missing <tbody>. Bailing hydration and performing ' +
+                'full client-side render.'
+              )
+            }
+          }
+          oldVnode = emptyNodeAt(oldVnode)
+        }
+
+        const oldElm = oldVnode.elm
+        const parentElm = nodeOps.parentNode(oldElm)
+        createElm(
+          vnode,
+          insertedVnodeQueue,
+          oldElm._leaveCb ? null : parentElm,
+          nodeOps.nextSibling(oldElm)
+        )
+
+        if (isDef(vnode.parent)) {
+          let ancestor = vnode.parent
+          const patchable = isPatchable(vnode)
+          while (ancestor) {
+            for (let i = 0; i < cbs.destroy.length; i++) {
+              cbs.destroy[i](ancestor)
+            }
+            ancestor.elm = vnode.elm
+            if (patchable) {
+              for (let i = 0; i < cbs.create.length; i++) {
+                cbs.create[i](emptyNode, ancestor)
+              }
+
+              const insert = ancestor.data.hook.insert
+              if (insert.merged) {
+                for (let i = 0; i < insert.fns.length; i++) {
+                  insert.fns[i]()
+                }
+              }
+            } else {
+              registerRef(ancestor)
+            }
+
+            ancestor = ancestor.parent
+          }
+        }
+
+        if (isDef(parentElm)) {
+          removeVnodes(parentElm, [ oldVnode ], 0, 0)
+        } else if (isDef(oldVnode.tag)) {
+          invokeDestroyHook(oldVnode)
+        }
+      }
+    }
+
+    invokeInsertHook(vnode, insertedVnodeQueue, isInitialPatch)
+    return vnode.elm
+  }
 }
 
 export {
