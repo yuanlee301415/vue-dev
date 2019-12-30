@@ -4,8 +4,8 @@ import { mark, measure } from '.././../core/util/perf.js'
 
 import Vue from './runtime/index.js'
 import { query } from './util/index.js'
+import { shouldDecodeNewlines } from './util/compat.js'
 import { compileToFunctions } from './compiler/index.js'
-import { shouldDecodeNewlines, shouldDecodeNewlinesForHref } from './util/compat.js'
 
 const idToTemplate = cached(id => {
   const el = query(id)

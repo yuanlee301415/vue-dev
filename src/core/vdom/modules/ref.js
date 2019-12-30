@@ -1,8 +1,23 @@
-
+/*2019-12-30 21:39:38*/
 import { remove } from "../../../shared/util.js"
 
+export default {
+  create (_, vnode) {
+    registerRef(vnode)
+  },
+  update (oldVnode, vnode) {
+    if (oldVnode.data.ref !== vnode.data.ref) {
+      registerRef(oldVnode, true)
+      registerRef(vnode)
+    }
+  },
+  destroy (vnode) {
+    registerRef(vnode, true)
+  }
+}
 
 function registerRef(vnode, isRemoval) {
+  /*2019-12-29 21:37:39*/
   const key = vnode.data.ref
   if  (!key) return
 
