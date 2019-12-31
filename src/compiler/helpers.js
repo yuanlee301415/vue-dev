@@ -92,7 +92,7 @@ function getAndRemoveAttr(el, name, removeFromMap) {
   return val
 }
 
-export default {
+export {
   baseWarn,
   pluckModuleFunction,
   addProp,
