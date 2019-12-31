@@ -5,7 +5,6 @@ import {
   extend,
   toNumber
 } from "../../../../core/util/index.js"
-import {no} from "../../../../core/util/index"
 
 function updateDomProps(oldVnode, vnode) {
   if (isUnDef(oldVnode.data.domProps) && isUnDef(vnode.data.domProps)) return
