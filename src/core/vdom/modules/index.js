@@ -2,7 +2,7 @@
 import directives from "./directives.js"
 import ref from './ref.js'
 
-export {
+export default {
   ref,
   directives
 }
