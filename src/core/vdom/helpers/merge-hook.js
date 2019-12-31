@@ -7,13 +7,13 @@ function mergeVNodeHook (def, hookKey, hook) {
   const oldHook = def[hookKey]
 
   if (isUnDef(oldHook)) {
-    invoker = createFnInvoker([ wrappedHook ])
+    invoker = createFnInvoker([wrappedHook])
   } else {
     if (isDef(oldHook.fns) && isTrue(oldHook.merged)) {
       invoker = oldHook
       invoker.fns.push(wrappedHook)
     } else {
-      invoker = createFnInvoker([ oldHook, wrappedHook ])
+      invoker = createFnInvoker([oldHook, wrappedHook])
     }
   }
 

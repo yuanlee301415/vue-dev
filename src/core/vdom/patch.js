@@ -639,7 +639,7 @@ function createPatchFunction(backend) {
         }
 
         if (isDef(parentElm)) {
-          removeVnodes(parentElm, [ oldVnode ], 0, 0)
+          removeVnodes(parentElm, [oldVnode], 0, 0)
         } else if (isDef(oldVnode.tag)) {
           invokeDestroyHook(oldVnode)
         }
