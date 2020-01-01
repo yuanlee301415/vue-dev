@@ -11,7 +11,9 @@ import directives from './directives/index.js'
 import { genStaticKeys } from '../../../shared/util.js'
 import { isUnaryTag, canBeLeftOpenTag } from './util.js'
 
-const baseOptions = {}
+const baseOptions = {
+
+}
 
 export {
   baseOptions
