@@ -1,3 +1,4 @@
+/*2020-1-1 14:16:20*/
 import attrs from './attrs.js'
 import klass from './class.js'
 import events from './events.js'
