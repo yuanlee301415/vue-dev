@@ -14,6 +14,6 @@ import {
 } from "../util/index.js"
 
 import { patch } from './patch.js'
-import platformDirectives from './dir'
+import platformDirectives from './directives/index.js'
 
 export default Vue
