@@ -73,7 +73,7 @@ function removeTransitionClass(el, cls) {
   removeClass(el, cls)
 }
 
-function whenTransitionEnd(el, expectedType, cb) {
+function whenTransitionEnds(el, expectedType, cb) {
   const { type, timeout, propCount } = getTransitionInfo(el, expectedType)
   if (!type) return cb()
 
@@ -162,6 +162,6 @@ export {
   nextFrame,
   addTransitionClass,
   removeTransitionClass,
-  whenTransitionEnd,
+  whenTransitionEnds,
   getTransitionInfo
 }
