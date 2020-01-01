@@ -7,8 +7,8 @@ function shouldDecode(content, encoded) {
   return div.innerHTML.indexOf(encoded) > 0
 }
 
-const shouldDecodeNewLines = inBrowser ? shouldDecode('\n', '&#10;') : false
+const shouldDecodeNewlines = inBrowser ? shouldDecode('\n', '&#10;') : false
 
 export {
-  shouldDecodeNewLines
+  shouldDecodeNewlines
 }
