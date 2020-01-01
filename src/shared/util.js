@@ -171,6 +171,12 @@ function once(fn) {
   }
 }
 
+function genStaticKeys(modules) {
+  return modules.reduce((keys, m) => {
+    return keys.concat(m.staticKeys || [])
+  }, [].join(','))
+}
+
 export {
   isDef,
   isObject,
@@ -201,5 +207,6 @@ export {
   isPrimitive,
   isTrue,
   isFalse,
-  once
+  once,
+  genStaticKeys
 }
