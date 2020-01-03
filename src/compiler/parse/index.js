@@ -1,3 +1,4 @@
+/*2020-1-3 21:53:4*/
 import he from './he.js'
 import { parseHTML } from "./html-parser.js"
 import { parseText } from "./text-parser.js"
@@ -16,7 +17,6 @@ import {
   getAndRemoveAttr,
   pluckModuleFunction
 } from "../helpers.js"
-import {bind} from "../../shared/util"
 
 const onRE = /^@|^v-on:/
 const dirRE = /^v-|^@|^:/
@@ -40,7 +40,7 @@ function createASTElement(tag, attrs, parent) {
   return {
     type: 1,
     tag,
-    attrsList: attrs,
+    attrsList: makeAttrsMap(attrs),
     parent,
     children: []
   }
@@ -48,9 +48,14 @@ function createASTElement(tag, attrs, parent) {
 
 function parse(template, options) {
   warn = options.warn || baseWarn
+
   platformIsPreTag = options.isPreTag || no
   platformMustUseProp = options.mustUseProp || no
   platformGetTagNamespace = options.getTagNamespace || no
+
+  transforms = pluckModuleFunction(options.modules, 'transformNode')
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformsNode')
+  postTransforms = pluckModuleFunction(options.modules, 'postTransformsNode')
 
   delimiters = options.delimiters
 
@@ -127,7 +132,7 @@ function parse(template, options) {
         processFor(element)
         processIf(element)
         processOnce(element)
-        processElement(element)
+        processElement(element, options)
       }
 
       function checkRootConstraints(el) {
@@ -218,8 +223,7 @@ function parse(template, options) {
         return
       }
 
-
-      if (isIE&& currentParent.tag === 'textara' && currentParent.attrsMap.placeholder === text) return
+      if (isIE && currentParent.tag === 'textara' && currentParent.attrsMap.placeholder === text) return
 
       const children = currentParent.children
       text = inPre || text.trim()
@@ -452,25 +456,33 @@ function processAttrs(el) {
   for (i = 0, l = list.length; i < l; i++) {
     name = rawName = list[i].name
     value = list[i].value
+
     if (dirRE.test(name)) {
       el.hasBindings = true
       modifiers = parseModifiers(name)
+
       if (modifiers) {
         name = name.replace(modifierRE, '')
       }
+
       if (bindRE.test(name)) { // v-bind
         name = name.replace(bindRE, '')
         value = parseFilters(value)
         isProp = false
+
         if (modifiers) {
+
           if (modifiers.prop) {
             isProp = true
             name = camelize(name)
+
             if (name === 'innerHTML') name = 'innerHTML'
           }
+
           if (modifiers.camel) {
             name = camelize(name)
           }
+
           if (modifiers.async) {
             addHandler(
               el,
@@ -485,6 +497,7 @@ function processAttrs(el) {
         } else {
           addAttr(el, name, value)
         }
+
       } else if (onRE.test(name)) { // v-on
         name = name.replace(onRE, '')
         addHandler(el, name,value, modifiers, false, warn)
@@ -492,18 +505,20 @@ function processAttrs(el) {
         name = name.replace(dirRE, '')
         const argMatch = name.match(argRE)
         const arg = argMatch && argMatch[1]
+
         if (arg) {
           name = name.slice(0, -(arg.length + 1))
         }
+
         addDirective(el, name, rawName, value, arg, modifiers)
+
         if (name === 'model') {
           checkForAliasModel(el, value)
         }
       }
     } else {
       // literal attribute
-      const exp = parseText(value, delimiters)
-      if (exp) {
+      if (parseText(value, delimiters)) {
         warn(
           `${name}="${value}": ` +
           'Interpolation inside attributes has been removed. ' +
@@ -553,7 +568,8 @@ function isTextTag(el) {
 function isForbiddenTag(el) {
   return (
     el.tag === 'style' ||
-    (el.tag === 'script' && !el.attrsMap.type || el.attrsMap.type === 'text/javascript')
+    (el.tag === 'script' && (!el.attrsMap.type || el.attrsMap.type === 'text/javascript')
+    )
   )
 }
 
