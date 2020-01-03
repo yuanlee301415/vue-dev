@@ -1,3 +1,4 @@
+import { parse } from "./parse/index.js"
 
 import { createCompilerCreator } from './create-compiler.js'
 

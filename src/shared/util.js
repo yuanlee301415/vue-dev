@@ -113,6 +113,8 @@ function makeMap(str, expectsLowerCase) {
   return expectsLowerCase ? val => map[val.toLowerCase()] : val => map[val]
 }
 
+const isBuiltInTag = makeMap('slot,component', true)
+
 const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
 
 const no = (a, b, c) => false
@@ -208,5 +210,6 @@ export {
   isTrue,
   isFalse,
   once,
-  genStaticKeys
+  genStaticKeys,
+  isBuiltInTag
 }
