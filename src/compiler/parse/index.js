@@ -16,9 +16,10 @@ import {
   getAndRemoveAttr,
   pluckModuleFunction
 } from "../helpers.js"
+import {bind} from "../../shared/util"
 
 const onRE = /^@|^v-on:/
-const dirRe = /^v-|^@|^:/
+const dirRE = /^v-|^@|^:/
 const forAliasRE = /(.*)?\s+(:in|of)\s+(.*)/
 const forIteratorRE = /\((\{[^}]*\}|[^,]*),([^,]*)(?:,([^,]*))?\)/
 const argRE = /:(.*)$/
@@ -257,97 +258,341 @@ function parse(template, options) {
 }
 
 function processPre(el) {
-  
+  if (getAndRemoveAttr(el, 'v-pre') != null) {
+    el.pre = true
+  }
 }
 
 function processRawAttrs(el) {
-
+  const l = el.attrsList.length
+  if (l) {
+    const attrs = el.attrs = new Array(l)
+    for (let i = 0; i < l; i++) {
+      attrs[i] = {
+        name: el.attrsList[i].name,
+        value: JSON.stringify(el.attrsList[i].value)
+      }
+    }
+  } else if (!el.pre) {
+    el.plain = true
+  }
 }
 
 function processElement(element, options) {
+  processKey(element)
+  element.plain = !element.key && !element.attrs.length
 
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
 }
 
 function processKey(el) {
-
+  const exp = getBindingAttr(el, 'key')
+  if (exp) {
+    if (el.tag === 'template') {
+      warn(`<template> cannot be keyed. Place the key on real elements instead.`)
+    }
+    el.key = exp
+  }
 }
 
 function processRef(el) {
-
+  const ref = getBindingAttr(el, 'ref')
+  if (ref) {
+    el.ref = ref
+    el.refer = checkInFor(el)
+  }
 }
 
 function processFor(el) {
-
+  const exp = getAndRemoveAttr(el, 'v-for')
+  if (exp) {
+    const inMatch = exp.match(forAliasRE)
+    if (!inMatch) {
+      warn(
+        `Invalid v-for expression: ${exp}`
+      )
+      return
+    }
+    el.for = inMatch[2].trim()
+    const alias = inMatch[1].trim()
+    const iteratorMatch = alias.match(forIteratorRE)
+    if (iteratorMatch) {
+      el.alias = iteratorMatch[1].trim()
+      el.iterator1 = iteratorMatch[2].trim()
+      if (iteratorMatch[3]) {
+        el.iterator2 = iteratorMatch[3].trim()
+      }
+    } else {
+      el.alias = alias
+    }
+  }
 }
 
 function processIf(el) {
-
+  const exp = getAndRemoveAttr(el, 'v-if')
+  if (exp) {
+    el.if = exp
+    addIfCondition(el, {
+      exp,
+      block: el
+    })
+  } else {
+    if (getAndRemoveAttr(el, 'v-else') != null) {
+      el.else = true
+    }
+    const elseif = getAndRemoveAttr('v-else-if')
+    if (elseif) {
+      el.elseif = elseif
+    }
+  }
 }
 
 function processIfConditions(el, parent) {
-
+  const prev = findPrevElement(parent.children)
+  if (prev && prev.if) {
+    addIfCondition(prev, {
+      exp: el.elseif,
+      block: el
+    })
+  } else {
+    warn(
+      `v-${el.elseif ? ('else-if="' + el.elseif + '"') : 'else'} ` +
+      `used on element <${el.tag}> without corresponding v-if.`
+    )
+  }
 }
 
 function findPrevElement(children) {
-
+  let i = children.length
+  while (i--) {
+    if (children[i].type === 1) {
+      return children[i]
+    } else {
+      if (children[i].text !== ' ') {
+        warn(
+          `text "${children[i].text.trim()}" between v-if and v-else(-if) ` +
+          `will be ignored.`
+        )
+      }
+      children.pop()
+    }
+  }
 }
 
 function addIfCondition(el, condition) {
-
+  if (!el.ifConditions) {
+    el.ifConditions = []
+  }
+  el.ifConditions.push(condition)
 }
 
 function processOnce(el) {
-
+  if (getAndRemoveAttr(el, 'v-once') != null) {
+    el.once = true
+  }
 }
 
 function processSlot(el) {
+  if (el.tag === 'slot') {
+    el.slotName = getBindingAttr(el, 'name')
+    if (el.key) {
+      warn(
+        `\`key\` does not work on <slot> because slots are abstract outlets ` +
+        `and can possibly expand into multiple elements. ` +
+        `Use the key on a wrapping element instead.`
+      )
+    }
+  } else {
+    let slotScope
+    if (el.tag === 'template') {
+      slotScope = getAndRemoveAttr(el, 'scope')
+      if (slotScope) {
+        warn(
+          `the "scope" attribute for scoped slots have been deprecated and ` +
+          `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
+          `can also be used on plain elements in addition to <template> to ` +
+          `denote scoped slots.`,
+          true
+        )
+      }
+      el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
+    } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+      el.slotScope = slotScope
+    }
 
+    const slotTarget = getBindingAttr(el, 'slot')
+    if (slotScope) {
+      el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
+      if (!el.slotTarget) {
+        addAttr(el, 'slot', slotTarget)
+      }
+    }
+  }
 }
 
 function processComponent(el) {
-
+  const binding = getBindingAttr(el, 'is')
+  if (binding) {
+    el.component = binding
+  }
+  if (getBindingAttr(el, 'inline-template') != null) {
+    el.inlineTemplate = true
+  }
 }
 
 function processAttrs(el) {
+  const list = el.attrsList
+  let i, l, name, rawName, value, modifiers, isProp
+  for (i = 0, l = list.length; i < l; i++) {
+    name = rawName = list[i].name
+    value = list[i].value
+    if (dirRE.test(name)) {
+      el.hasBindings = true
+      modifiers = parseModifiers(name)
+      if (modifiers) {
+        name = name.replace(modifierRE, '')
+      }
+      if (bindRE.test(name)) { // v-bind
+        name = name.replace(bindRE, '')
+        value = parseFilters(value)
+        isProp = false
+        if (modifiers) {
+          if (modifiers.prop) {
+            isProp = true
+            name = camelize(name)
+            if (name === 'innerHTML') name = 'innerHTML'
+          }
+          if (modifiers.camel) {
+            name = camelize(name)
+          }
+          if (modifiers.async) {
+            addHandler(
+              el,
+              `update:${camelize(name)}`,
+              genAssignmentCode(value, '$event')
+            )
+          }
+        }
 
+        if (isProp || (!el.componennt && platformMustUseProp(el.tag, el.attrsMap.type, name))) {
+          addProp(el, name, value)
+        } else {
+          addAttr(el, name, value)
+        }
+      } else if (onRE.test(name)) { // v-on
+        name = name.replace(onRE, '')
+        addHandler(el, name,value, modifiers, false, warn)
+      } else { // normal directives
+        name = name.replace(dirRE, '')
+        const argMatch = name.match(argRE)
+        const arg = argMatch && argMatch[1]
+        if (arg) {
+          name = name.slice(0, -(arg.length + 1))
+        }
+        addDirective(el, name, rawName, value, arg, modifiers)
+        if (name === 'model') {
+          checkForAliasModel(el, value)
+        }
+      }
+    } else {
+      // literal attribute
+      const exp = parseText(value, delimiters)
+      if (exp) {
+        warn(
+          `${name}="${value}": ` +
+          'Interpolation inside attributes has been removed. ' +
+          'Use v-bind or the colon shorthand instead. For example, ' +
+          'instead of <div id="{{ val }}">, use <div :id="val">.'
+        )
+      }
+      addAttr(el, name, JSON.stringify(value))
+    }
+  }
 }
 
 function checkInFor(el) {
-
+  let parent = el
+  while (parent) {
+    if (parent.for !== void 0) return true
+    parent = parent.parent
+  }
+  return false
 }
 
 function parseModifiers(name) {
-
+  const match = name.match(modifierRE)
+  if (match) {
+    const ret = {}
+    match.forEach(m => {
+      ret[m.slice(1)] = true
+    })
+  }
 }
 
 function makeAttrsMap(attrs) {
-
+  const map = {}
+  for (let i = 0, l = attrs.length; i < l; i++) {
+    if (map[attrs[i].name] && !isIE && !isEdge) {
+      warn('duplicate attribute: ' + attrs[i].name)
+    }
+    map[attrs[i].name] = attrs[i].value
+  }
+  return map
 }
 
 function isTextTag(el) {
-
+  return el.tag === 'script' || el.tag === 'style'
 }
 
 function isForbiddenTag(el) {
-
+  return (
+    el.tag === 'style' ||
+    (el.tag === 'script' && !el.attrsMap.type || el.attrsMap.type === 'text/javascript')
+  )
 }
 
 const ieNSBug = /^xmlns:NS\d+/
 const ieNSPrefix = /^NS\d+:/
 
 function guardIESVGBug(attrs) {
-
+  const res = []
+  for (let i =0; i < attrs.length; i++) {
+    const attr = attrs[i]
+    if (!ieNSBug.test(attr.name)) {
+      attr.name = attr.name.replace(ieNSPrefix, '')
+      res.push(attr)
+    }
+  }
+  return res
 }
 
 function checkForAliasModel(el, value) {
-
+  let _el = el
+  while (_el) {
+    if (_el.for && _el.alias === value) {
+      warn(
+        `<${el.tag} v-model="${value}">: ` +
+        `You are binding v-model directly to a v-for iteration alias. ` +
+        `This will not be able to modify the v-for source array because ` +
+        `writing to the alias is like modifying a function local variable. ` +
+        `Consider using an array of objects and use v-model on an object property instead.`
+      )
+    }
+    _el = _el.parent
+  }
 }
 
 export default createASTElement
 
 export {
   onRE,
-  dirRe,
+  dirRE,
   forAliasRE,
   forIteratorRE,
   decodeHTMLCached,

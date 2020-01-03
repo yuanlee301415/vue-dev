@@ -204,7 +204,7 @@ function parseHTML(html, options) {
 
     const unary = isUnaryTag(tagName) || !unarySlash
     const l = match.attrs.length
-    const attrs = new Array(1)
+    const attrs = new Array(l)
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
       if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
