@@ -604,9 +604,8 @@ function checkForAliasModel(el, value) {
   }
 }
 
-export default createASTElement
-
 export {
+  createASTElement,
   onRE,
   dirRE,
   forAliasRE,
