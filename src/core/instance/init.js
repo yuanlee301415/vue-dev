@@ -60,7 +60,7 @@ function initMixin(Vue) {
     callHook(this, 'created')
 
     if (this.$options.el) {
-      // this.$mount(this.$options.el)
+      this.$mount(this.$options.el)
     }
   }
 }
