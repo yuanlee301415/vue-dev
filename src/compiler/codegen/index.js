@@ -27,6 +27,7 @@ class CodegenState {
 }
 
 function generate(ast, options) {
+  console.log('generate>options:', JSON.stringify(options))
   const state = new CodegenState(options)
   const code = ast ? genElement(ast, state) : '_c("div")'
   return {

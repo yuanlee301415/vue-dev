@@ -47,6 +47,7 @@ function createASTElement(tag, attrs, parent) {
 }
 
 function parse(template, options) {
+  // console.log('parse>options.modules:', JSON.stringify(options.modules))
   warn = options.warn || baseWarn
 
   platformIsPreTag = options.isPreTag || no

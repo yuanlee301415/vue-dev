@@ -6,7 +6,7 @@ function baseWarn(msg) {
 }
 
 function pluckModuleFunction(modules, key) {
-  return modules ? modules.map(m => m[key].filter(_ => _)) : []
+  return modules ? modules.map(m => m[key]).filter(_ => _) : []
 }
 
 function addProp(el, name, value) {

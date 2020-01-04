@@ -4,7 +4,7 @@ const GlobalComp = Vue.component('GlobalComp', {
   props: {
     title: String
   },
-  template: '<h1>GlobalComp-Title is {{ title }}</h1>'
+  template: '<h1>GlobalComp-Title is : [{{ title }}]</h1>'
 })
 const LocalComp = {
   name: 'LocalComp',
@@ -19,10 +19,7 @@ const app = new Vue({
   components: {
     GlobalComp
   },
-  template: `<div id="test">
-Time: {{ time }}
-<global-comp title="Global"/>
-</div>`,
+  template: '#temp',
   data: {
     time: new Date()
   },
