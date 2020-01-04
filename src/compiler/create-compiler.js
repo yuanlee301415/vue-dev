@@ -1,12 +1,16 @@
-/*2020-1-4 18:24:4*/
-import { extend } from "../shared/util.js"
-import { detectErrors } from "./error-detector.js"
-import { createCompileToFunctionFn } from "./to-function.js"
+/*override*/
+/* @flow */
 
-function createCompilerCreator(baseCompile) {
-  return function createCompiler(baseOptions) {
+import { extend } from '../shared/util.js'
+import { detectErrors } from './error-detector.js'
+import { createCompileToFunctionFn } from './to-function.js'
 
-    function compile(template, options) {
+export function createCompilerCreator (baseCompile) {
+  return function createCompiler (baseOptions) {
+    function compile (
+      template,
+      options
+    ) {
       const finalOptions = Object.create(baseOptions)
       const errors = []
       const tips = []
@@ -15,25 +19,30 @@ function createCompilerCreator(baseCompile) {
       }
 
       if (options) {
+        // merge custom modules
         if (options.modules) {
-          finalOptions.modules = (baseOptions.modules || []).concat(options.modules)
+          finalOptions.modules =
+            (baseOptions.modules || []).concat(options.modules)
         }
-
+        // merge custom directives
         if (options.directives) {
-          finalOptions.directives = extend(Object.create(baseOptions.directives), options.directives)
+          finalOptions.directives = extend(
+            Object.create(baseOptions.directives),
+            options.directives
+          )
         }
-
+        // copy other options
         for (const key in options) {
           if (key !== 'modules' && key !== 'directives') {
             finalOptions[key] = options[key]
           }
         }
-
       }
 
       const compiled = baseCompile(template, finalOptions)
-      errors.push.apply(errors, detectErrors(compiled.ast))
-
+      if ('process.env.NODE_ENV' !== 'production') {
+        errors.push.apply(errors, detectErrors(compiled.ast))
+      }
       compiled.errors = errors
       compiled.tips = tips
       return compiled
@@ -44,8 +53,4 @@ function createCompilerCreator(baseCompile) {
       compileToFunctions: createCompileToFunctionFn(compile)
     }
   }
-}
-
-export {
-  createCompilerCreator
 }
