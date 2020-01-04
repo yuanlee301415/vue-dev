@@ -1,5 +1,5 @@
 /*2019-12-31 23:28:13*/
-import { cached, extend, toObject } from "../../../core/util"
+import { cached, extend, toObject } from "../../../core/util/index.js"
 
 const parseStyleText = cached(function (cssText) {
   const res = {}
