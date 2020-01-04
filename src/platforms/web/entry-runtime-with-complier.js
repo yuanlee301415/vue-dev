@@ -1,3 +1,4 @@
+/*2020-1-4 18:35:11*/
 import config from '.././../core/config.js'
 import { cached } from '.././../core/util/index.js'
 import { mark, measure } from '.././../core/util/perf.js'
