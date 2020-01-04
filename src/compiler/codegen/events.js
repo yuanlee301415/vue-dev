@@ -1,7 +1,10 @@
-/*2020-1-4 14:17:51*/
+/*override*/
+/* @flow */
+
 const fnExpRE = /^\s*([\w$_]+|\([^)]*?\))\s*=>|^function\s*\(/
 const simplePathRE = /^\s*[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['.*?']|\[".*?"]|\[\d+]|\[[A-Za-z_$][\w$]*])*\s*$/
 
+// keyCode aliases
 const keyCodes = {
   esc: 27,
   tab: 9,
@@ -11,9 +14,12 @@ const keyCodes = {
   left: 37,
   right: 39,
   down: 40,
-  'delete': [8, 45]
+  'delete': [8, 46]
 }
 
+// #4868: modifiers that prevent the execution of the listener
+// need to explicitly return null so that we can determine whether to remove
+// the listener for .once
 const genGuard = condition => `if(${condition})return null;`
 
 const modifierCode = {
@@ -29,11 +35,19 @@ const modifierCode = {
   right: genGuard(`'button' in $event && $event.button !== 2`)
 }
 
-function genHandlers(events, isNative, warn) {
+export function genHandlers (
+  events,
+  isNative,
+  warn
+) {
   let res = isNative ? 'nativeOn:{' : 'on:{'
   for (const name in events) {
     const handler = events[name]
-    if (name === 'click' && handler.modifiers && handler.modifiers.right) {
+    // #5330: warn click.right, since right clicks do not actually fire click events.
+    if ('process.env.NODE_ENV' !== 'production' &&
+      name === 'click' &&
+      handler && handler.modifiers && handler.modifiers.right
+    ) {
       warn(
         `Use "contextmenu" instead of "click.right" since right clicks ` +
         `do not actually fire "click" events.`
@@ -44,32 +58,39 @@ function genHandlers(events, isNative, warn) {
   return res.slice(0, -1) + '}'
 }
 
-function genHandler(name, handler) {
-  if (!handler) return `function(){}`
+function genHandler (
+  name,
+  handler
+) {
+  if (!handler) {
+    return 'function(){}'
+  }
 
-  if (Array.isArray(handler)) return `[${handler.map(handler => genHandler(name, handler)).join()}]`
+  if (Array.isArray(handler)) {
+    return `[${handler.map(handler => genHandler(name, handler)).join(',')}]`
+  }
 
   const isMethodPath = simplePathRE.test(handler.value)
-  const isFunctionExp = fnExpRE.test(handler.value)
+  const isFunctionExpression = fnExpRE.test(handler.value)
 
   if (!handler.modifiers) {
-    return isMethodPath || isFunctionExp
+    return isMethodPath || isFunctionExpression
       ? handler.value
-      : `function($event){${handler.value}}`
+      : `function($event){${handler.value}}` // inline statement
   } else {
     let code = ''
-    let genModifiersCode = ''
+    let genModifierCode = ''
     const keys = []
     for (const key in handler.modifiers) {
       if (modifierCode[key]) {
-        genModifiersCode += modifierCode[key]
+        genModifierCode += modifierCode[key]
         // left/right
         if (keyCodes[key]) {
           keys.push(key)
         }
       } else if (key === 'exact') {
-        const modifiers = handler.modifiers
-        genModifiersCode += genGuard(
+        const modifiers = (handler.modifiers)
+        genModifierCode += genGuard(
           ['ctrl', 'shift', 'alt', 'meta']
             .filter(keyModifier => !modifiers[keyModifier])
             .map(keyModifier => `$event.${keyModifier}Key`)
@@ -79,41 +100,36 @@ function genHandler(name, handler) {
         keys.push(key)
       }
     }
-
     if (keys.length) {
       code += genKeyFilter(keys)
     }
-
-    if (genModifiersCode) {
-      code += genModifiersCode
+    // Make sure modifiers like prevent and stop get executed after key filtering
+    if (genModifierCode) {
+      code += genModifierCode
     }
-
     const handlerCode = isMethodPath
       ? handler.value + '($event)'
-      : isFunctionExp
+      : isFunctionExpression
         ? `(${handler.value})($event)`
         : handler.value
     return `function($event){${code}${handlerCode}}`
   }
 }
 
-function genKeyFilter(keys) {
-  return `if(!('button in $event')&&${keys.map(genFilterCode).join('&&')}) return null;`
+function genKeyFilter (keys) {
+  return `if(!('button' in $event)&&${keys.map(genFilterCode).join('&&')})return null;`
 }
 
-function genFilterCode(key) {
-  const keyVal = parseInt(key)
-  if (keyVal) return `$event.keyCode!==${keyVal}`
-
+function genFilterCode (key) {
+  const keyVal = parseInt(key, 10)
+  if (keyVal) {
+    return `$event.keyCode!==${keyVal}`
+  }
   const code = keyCodes[key]
   return (
     `_k($event.keyCode,` +
-      `${JSON.stringify(key)},` +
-      `${JSON.stringify(code)},` +
-      `$event.key)`
+    `${JSON.stringify(key)},` +
+    `${JSON.stringify(code)},` +
+    `$event.key)`
   )
-}
-
-export {
-  genHandlers
 }
