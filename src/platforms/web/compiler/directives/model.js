@@ -1,7 +1,7 @@
 /*2019-12-31 22:58:52*/
 import config from "../../../../core/config.js"
 import { addHandler, addProp, getBindingAttr } from '../../../../compiler/helpers.js'
-import { genComponentModel, genAssignmentCode } from "../../../../compiler/directvies/model.js"
+import { genComponentModel, genAssignmentCode } from "../../../../compiler/directives/model.js"
 
 let warn
 const RANGE_TOKEN = '__r'

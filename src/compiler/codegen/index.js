@@ -1,6 +1,6 @@
 /*2020-1-4 16:48:11*/
 import { genHandlers } from "./events.js"
-import baseDirectives from '../directvies/index.js'
+import baseDirectives from '../directives/index.js'
 import { camelize, no, extend } from "../../shared/util.js"
 import { baseWarn, pluckModuleFunction } from "../helpers.js"
 
