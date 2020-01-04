@@ -53,7 +53,9 @@ function genHandler(name, handler) {
   const isFunctionExp = fnExpRE.test(handler.value)
 
   if (!handler.modifiers) {
-    return isMethodPath || isFunctionExp ? handler.value : `function($event){${handler.value}`
+    return isMethodPath || isFunctionExp
+      ? handler.value
+      : `function($event){${handler.value}}`
   } else {
     let code = ''
     let genModifiersCode = ''
@@ -68,7 +70,10 @@ function genHandler(name, handler) {
       } else if (key === 'exact') {
         const modifiers = handler.modifiers
         genModifiersCode += genGuard(
-          ['ctrl', 'shift', 'alt', 'meta'].filter(keyModifier => !modifiers[keyModifier]).map(keyModifier => `$event.${keyModifier}Key`).join('||')
+          ['ctrl', 'shift', 'alt', 'meta']
+            .filter(keyModifier => !modifiers[keyModifier])
+            .map(keyModifier => `$event.${keyModifier}Key`)
+            .join('||')
         )
       } else {
         keys.push(key)
@@ -83,8 +88,12 @@ function genHandler(name, handler) {
       code += genModifiersCode
     }
 
-    const handlerCode = isMethodPath ? handler.value += '($event)' : isFunctionExp ? `(${handler.value})($event)` : handler.value
-    return `function($event){${code}${handlerCode}`
+    const handlerCode = isMethodPath
+      ? handler.value + '($event)'
+      : isFunctionExp
+        ? `(${handler.value})($event)`
+        : handler.value
+    return `function($event){${code}${handlerCode}}`
   }
 }
 
@@ -104,7 +113,6 @@ function genFilterCode(key) {
       `$event.key)`
   )
 }
-
 
 export {
   genHandlers
