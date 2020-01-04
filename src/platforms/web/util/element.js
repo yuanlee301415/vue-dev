@@ -1,6 +1,5 @@
 /*2019-12-29 16:35:53*/
-import { inBrowser } from "../../../core/util/index.js"
-import { makeMap } from "../../../core/util/index.js"
+import { inBrowser, makeMap } from "../../../core/util/index.js"
 
 const namespaceMap = {
   svg: 'http://www.w3.org/2000/svg',
