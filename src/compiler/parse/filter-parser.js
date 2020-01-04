@@ -1,8 +1,8 @@
-/*2019-12-29 17:41:6*/
+/* @flow */
 
-const validDivisionCharRE = /[\W).+\-_$\]]/
+const validDivisionCharRE = /[\w).+\-_$\]]/
 
-function parseFilters(exp) {
+export function parseFilters (exp) {
   let inSingle = false
   let inDouble = false
   let inTemplateString = false
@@ -17,58 +17,43 @@ function parseFilters(exp) {
     prev = c
     c = exp.charCodeAt(i)
     if (inSingle) {
-      if (c === 0x27 && prev !== 0x5c) inSingle = false
+      if (c === 0x27 && prev !== 0x5C) inSingle = false
     } else if (inDouble) {
-      if (c === 0x22 && prev !== 0x5c) inDouble = false
+      if (c === 0x22 && prev !== 0x5C) inDouble = false
     } else if (inTemplateString) {
-      if (c === 0x60 && prev !== 0x5c) inTemplateString = false
+      if (c === 0x60 && prev !== 0x5C) inTemplateString = false
     } else if (inRegex) {
-      if (c === 0x2f && prev !== 0x5c) inRegex = false
+      if (c === 0x2f && prev !== 0x5C) inRegex = false
     } else if (
-      c === 0x7c && // pipe
-      exp.charCodeAt(i + 1) !== 0x7c &&
-      exp.charCodeAt(i - 1) !== 0x7c &&
+      c === 0x7C && // pipe
+      exp.charCodeAt(i + 1) !== 0x7C &&
+      exp.charCodeAt(i - 1) !== 0x7C &&
       !curly && !square && !paren
     ) {
-      if (expression === void 0) {
+      if (expression === undefined) {
+        // first filter, end of expression
         lastFilterIndex = i + 1
+        expression = exp.slice(0, i).trim()
       } else {
         pushFilter()
       }
     } else {
       switch (c) {
-        case 0x22: // "
-          inDouble = true
-          break
-        case 0x27: // '
-          inSingle = true
-          break
-        case 0x60: // `
-          inTemplateString = true
-          break
-        case 0x28: // (
-          paren++
-          break
-        case 0x29: // )
-          paren--
-          break
-        case 0x5b: // [
-          square++
-          break
-        case 0x5d: // ]
-          square--
-          break
-        case 0x7b: // {
-          curly++
-          break
-        case 0x7d: // }
-          curly--
-          break
+        case 0x22: inDouble = true; break         // "
+        case 0x27: inSingle = true; break         // '
+        case 0x60: inTemplateString = true; break // `
+        case 0x28: paren++; break                 // (
+        case 0x29: paren--; break                 // )
+        case 0x5B: square++; break                // [
+        case 0x5D: square--; break                // ]
+        case 0x7B: curly++; break                 // {
+        case 0x7D: curly--; break                 // }
       }
       if (c === 0x2f) { // /
         let j = i - 1
         let p
-        for(;j >= 0; j--) {
+        // find first non-whitespace prev char
+        for (; j >= 0; j--) {
           p = exp.charAt(j)
           if (p !== ' ') break
         }
@@ -79,13 +64,13 @@ function parseFilters(exp) {
     }
   }
 
-  if (expression === void 0) {
+  if (expression === undefined) {
     expression = exp.slice(0, i).trim()
   } else if (lastFilterIndex !== 0) {
     pushFilter()
   }
 
-  function pushFilter() {
+  function pushFilter () {
     (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
     lastFilterIndex = i + 1
   }
@@ -95,21 +80,18 @@ function parseFilters(exp) {
       expression = wrapFilter(expression, filters[i])
     }
   }
+
   return expression
 }
 
-function wrapFilter(exp, filter) {
+function wrapFilter (exp, filter) {
   const i = filter.indexOf('(')
   if (i < 0) {
+    // _f: resolveFilter
     return `_f("${filter}")(${exp})`
   } else {
     const name = filter.slice(0, i)
     const args = filter.slice(i + 1)
     return `_f("${name}")(${exp},${args}`
   }
-}
-
-
-export {
-  parseFilters
 }
