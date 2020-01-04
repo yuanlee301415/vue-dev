@@ -1,4 +1,4 @@
-
+/*2020-1-4 16:48:11*/
 import { genHandlers } from "./events.js"
 import baseDirectives from '../directvies/index.js'
 import { camelize, no, extend } from "../../shared/util.js"
@@ -30,7 +30,7 @@ function generate(ast, options) {
   const state = new CodegenState(options)
   const code = ast ? genElement(ast, state) : '_c("div")'
   return {
-    render: `with(this){return ${code}`,
+    render: `with(this){return ${code}}`,
     staticRenderFns: state.staticRenderFns
   }
 }
@@ -55,7 +55,7 @@ function genElement(el, state) {
     const data = el.plain ? void 0 : genData(el, state)
     const children = el.inlineTemplate ? null : genChildren(el, state, true)
 
-    code = `_c("${el.tag}"${
+    code = `_c('${el.tag}'${
       data ? `,${data}` : ''
     }${
       children ? `,${children}` : ''
@@ -70,7 +70,7 @@ function genElement(el, state) {
 
 function genStatic(el, state) {
   el.staticProcessed = true
-  state.staticRenderFns.push(`with(this){return ${genElement(el, state)}`)
+  state.staticRenderFns.push(`with(this){return ${genElement(el, state)}}`)
   return `_m(${state.staticRenderFns.length - 1}${el.staticInFor ? ',true' : ''})`
 }
 
@@ -164,16 +164,16 @@ function genData(el, state) {
   }
 
   if (el.refInFor) {
-    data += `refInFor:true`
+    data += `refInFor:true,`
   }
 
   // pre
   if (el.pre) {
-    data += `pre:true`
+    data += `pre:true,`
   }
 
   if (el.component) {
-    data += `tag:'${el.tag}'`
+    data += `tag:'${el.tag}',`
   }
 
   for (let i = 0; i < state.dataGenFns.length; i++) {
@@ -182,23 +182,23 @@ function genData(el, state) {
 
   // attrs
   if (el.attrs) {
-    data += `attrs:{${genProps(el.attrs)}`
+    data += `attrs:{${genProps(el.attrs)}},`
   }
 
   if (el.pros) {
-    data += `domProps:${genProps(el.props)}`
+    data += `domProps:{${genProps(el.props)}},`
   }
 
   if (el.events) {
-    data += `${genHandlers(el.events, false, state.warn)}`
+    data += `${genHandlers(el.events, false, state.warn)},`
   }
 
   if (el.nativeEvents) {
-    data += `${genHandlers(el.nativeEvents, true, state.warn)}`
+    data += `${genHandlers(el.nativeEvents, true, state.warn)},`
   }
 
   if (el.scopedSlots) {
-    data += `${genScopedSlots(el.scopedSlots, state)}`
+    data += `${genScopedSlots(el.scopedSlots, state)},`
   }
 
   if (el.model) {
@@ -208,13 +208,13 @@ function genData(el, state) {
       el.model.callback
     },expression:${
       el.model.expression
-    }`
+    }},`
   }
 
   if (el.inlineTemplate) {
     const temp = genInlineTemplate(el, state)
     if (temp) {
-      data += `${temp}`
+      data += `${temp},`
     }
   }
 
@@ -273,7 +273,7 @@ function genInlineTemplate(el, state) {
       inlineRenderFns.render
     }},staticRenderFns:[${
       inlineRenderFns.staticRenderFns.map(code => `function(){${code}}`).join()
-    }`
+    }]}`
   }
 }
 
@@ -289,9 +289,10 @@ function genScopedSlot(key, el, state) {
   const fn = `function(${String(el.slotScope)}){` +
   `return ${el.tag === 'template'}`
     ? el.if
-      ? `${el.if}?${genChildren(el, state) || 'void 0'}:void 0` : genChildren(el, state) || 'void 0'
+      ? `${el.if}?${genChildren(el, state) || 'void 0'}:void 0`
+      : genChildren(el, state) || 'void 0'
     : genElement(el, state)
-  return `{key:${key},fn:${fn}`
+  return `{key:${key},fn:${fn}}`
 }
 
 function genForScopedSlot(key, el, state) {
@@ -301,6 +302,7 @@ function genForScopedSlot(key, el, state) {
   const iterator2 = el.iterator2 ? `,${el.iterator2}` : ''
 
   el.forProcessed = true
+
   return `_l((${exp}),` +
     `function(${alias}${iterator1}${iterator2}){` +
     `return ${genScopedSlot(key, el, state)}` +
@@ -309,14 +311,22 @@ function genForScopedSlot(key, el, state) {
 
 function genChildren(el, state, checkSkip, altGenElement, altGenNode) {
   const children = el.children
-  if (children.length === 1 && el.for && el.tag !== 'template' && el.tag !== 'slot') {
+  if (children.length === 1 &&
+    el.for &&
+    el.tag !== 'template' &&
+    el.tag !== 'slot'
+  ) {
     return (altGenElement || genElement)(el, state)
   }
 
-  const normalizationType = checkSkip ? getNormalizationType(children, state.maybeComponent) : 0
+  const normalizationType = checkSkip
+    ? getNormalizationType(children, state.maybeComponent)
+    : 0
+
   const gen = altGenNode || genNode
+
   return `[${children.map(c =>gen(c, state)).join()}]${
-    normalizationType ? `',${normalizationType}` : ''
+    normalizationType ? `,${normalizationType}` : ''
   }`
 }
 
@@ -356,7 +366,8 @@ function genNode(node, state) {
 
 function genText(text) {
   return `_v(${text.type === 2
-    ? text.expression : transformSpacialNewlines(JSON.stringify(text.text))
+    ? text.expression
+    : transformSpacialNewlines(JSON.stringify(text.text))
   })`
 }
 
@@ -378,7 +389,7 @@ function genSlot(el, state) {
   }
 
   if (bind) {
-    res =+ `${attrs ? '' : ',null'},${bind}`
+    res += `${attrs ? '' : ',null'},${bind}`
   }
 
   return res + ')'
@@ -395,7 +406,7 @@ function genProps(props) {
   let res = ''
   for (let i = 0; i < props.length; i++) {
     const prop = props[i]
-    res += `"${prop.name}":${transformSpacialNewlines(prop.value)}`
+    res += `"${prop.name}":${transformSpacialNewlines(prop.value)},`
   }
   return res.slice(0, -1)
 }
