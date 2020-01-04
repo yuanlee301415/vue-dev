@@ -1,3 +1,4 @@
+/*override*/
 import he from './he.js'
 import { parseHTML } from './html-parser.js'
 import { parseText } from './text-parser.js'

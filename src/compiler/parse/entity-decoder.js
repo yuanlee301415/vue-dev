@@ -1,5 +1,5 @@
 /* @flow */
-
+/*override*/
 let decoder
 
 export default {

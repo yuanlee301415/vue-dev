@@ -1,5 +1,5 @@
+/*override*/
 /* @flow */
-
 const validDivisionCharRE = /[\w).+\-_$\]]/
 
 export function parseFilters (exp) {
