@@ -18,7 +18,7 @@ import {
   processElement,
   addIfCondition,
   createASTElement
-} from "../../../../compiler/parse/index.js"
+} from "../../../../compiler/parser/index.js"
 
 function preTransformNode(el, options) {
   if (el.tag === 'input') {

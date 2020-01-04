@@ -1,5 +1,5 @@
 /*2020-1-3 22:27:34*/
-import { parseText } from "../../../../compiler/parse/text-parser.js"
+import { parseText } from "../../../../compiler/parser/text-parser.js"
 import { parseStyleText } from "../../util/style.js"
 import {
   getAndRemoveAttr,

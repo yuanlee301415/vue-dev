@@ -1,5 +1,5 @@
 /*2020-1-1 16:27:31*/
-import  { parseText } from '../../../../compiler/parse/text-parser.js'
+import  { parseText } from '../../../../compiler/parser/text-parser.js'
 import {
   getAndRemoveAttr,
   getBindingAttr,

@@ -1,5 +1,5 @@
 /*2019-12-31 21:42:17*/
-import { parseFilters } from "./parse/filter-parser.js"
+import { parseFilters } from "./parser/filter-parser.js"
 
 function baseWarn(msg) {
   console.error(`[vue compiler]: ${msg}`)

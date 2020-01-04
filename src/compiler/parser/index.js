@@ -524,7 +524,7 @@ function processAttrs (el) {
         addHandler(el, name, value, modifiers, false, warn)
       } else { // normal directives
         name = name.replace(dirRE, '')
-        // parse arg
+        // parser arg
         const argMatch = name.match(argRE)
         const arg = argMatch && argMatch[1]
         if (arg) {

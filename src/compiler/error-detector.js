@@ -1,6 +1,10 @@
-/*2020-1-4 17:16:3*/
-import { dirRE, onRE } from "./parse/index.js"
+/*over*/
+/* @flow */
 
+import { dirRE, onRE } from './parser/index.js'
+
+// these keywords should not appear inside expressions, but operators like
+// typeof, instanceof and in are allowed
 const prohibitedKeywordRE = new RegExp('\\b' + (
   'do,if,for,let,new,try,var,case,else,with,await,break,catch,class,const,' +
   'super,throw,while,yield,delete,export,import,return,switch,default,' +
@@ -18,7 +22,8 @@ const identRE = /[A-Za-z_$][\w$]*/
 // strip strings in expressions
 const stripStringRE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g
 
-function detectErrors(ast) {
+// detect problematic expressions in a template
+export function detectErrors (ast) {
   const errors = []
   if (ast) {
     checkNode(ast, errors)
@@ -26,7 +31,7 @@ function detectErrors(ast) {
   return errors
 }
 
-function checkNode(node, errors) {
+function checkNode (node, errors) {
   if (node.type === 1) {
     for (const name in node.attrsMap) {
       if (dirRE.test(name)) {
@@ -42,7 +47,6 @@ function checkNode(node, errors) {
         }
       }
     }
-
     if (node.children) {
       for (let i = 0; i < node.children.length; i++) {
         checkNode(node.children[i], errors)
@@ -53,7 +57,7 @@ function checkNode(node, errors) {
   }
 }
 
-function checkEvent(exp, text, errors) {
+function checkEvent (exp, text, errors) {
   const stipped = exp.replace(stripStringRE, '')
   const keywordMatch = stipped.match(unaryOperatorsRE)
   if (keywordMatch && stipped.charAt(keywordMatch.index - 1) !== '$') {
@@ -65,21 +69,20 @@ function checkEvent(exp, text, errors) {
   checkExpression(exp, text, errors)
 }
 
-function checkFor(node, text, errors) {
+function checkFor (node, text, errors) {
   checkExpression(node.for || '', text, errors)
   checkIdentifier(node.alias, 'v-for alias', text, errors)
   checkIdentifier(node.iterator1, 'v-for iterator', text, errors)
   checkIdentifier(node.iterator2, 'v-for iterator', text, errors)
 }
 
-function checkIdentifier(ident, type, text, errors) {
+function checkIdentifier (ident, type, text, errors) {
   if (typeof ident === 'string' && !identRE.test(ident)) {
     errors.push(`invalid ${type} "${ident}" in expression: ${text.trim()}`)
   }
 }
 
-
-function checkExpression(exp, text, errors) {
+function checkExpression (exp, text, errors) {
   try {
     new Function(`return ${exp}`)
   } catch (e) {
@@ -97,8 +100,4 @@ function checkExpression(exp, text, errors) {
       )
     }
   }
-}
-
-export {
-  detectErrors
 }

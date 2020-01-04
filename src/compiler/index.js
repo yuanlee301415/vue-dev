@@ -1,5 +1,5 @@
 /*2020-1-4 18:27:29*/
-import { parse } from "./parse/index.js"
+import { parse } from "./parser/index.js"
 import { optimize } from "./optimizer.js"
 import { generate } from "./codegen/index.js"
 import { createCompilerCreator } from './create-compiler.js'
