@@ -289,8 +289,8 @@ function genScopedSlot(key, el, state) {
   const fn = `function(${String(el.slotScope)}){` +
   `return ${el.tag === 'template'}`
     ? el.if
-      ? `${el.if}?${genChildren(el, state) || 'void 0'}:void 0`
-      : genChildren(el, state) || 'void 0'
+      ? `${el.if}?${genChildren(el, state) || 'undefined'}:undefined`
+      : genChildren(el, state) || 'undefined'
     : genElement(el, state)
   return `{key:${key},fn:${fn}}`
 }
