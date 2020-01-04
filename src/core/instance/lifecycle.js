@@ -1,7 +1,12 @@
-import { remove, emptyObject, validateProp } from "../util/index.js"
+/*2019-12-29 18:16:21*/
+import config from "../config.js"
+import Watcher from "../observer/Watcher.js"
+import { mark, measure } from '../util/perf.js'
+import { createEmptyVNode } from "../vdom/vnode.js"
+import { observeState } from "../observer/index.js"
 import { updateComponentListeners } from "./events.js"
 import { resolveSlots } from "./render-helpers/resolve-slots.js"
-import { observeState } from "../observer/index.js"
+import { noop, remove, emptyObject, validateProp } from "../util/index.js"
 
 let activeInstance = null
 let isUpdatingChildComponent = false
@@ -118,52 +123,69 @@ function initLifecycle(vm) {
   console.log('init>this.$parent/$root/$children/$refs/_watcher/_inactive/_directInactive/_isMounted/_isDestroyed/_isBeingDestroyed')
 }
 
-function callHook(vm, hook) {
-  /*2019-12-23 20:22:51*/
-  const handlers = vm.$options[hook]
-  if (handlers) {
-    for (let i = 0, l = handlers.length; i < l; i++) {
-      try {
-        handlers[i].call(vm)
-      } catch (e) {
-        console.error(e, vm, `${hook} hook`)
-      }
+function mountComponent(vm, el, hydrating) {
+  /*2019-12-29 18:12:23*/
+  vm.$el = el
+  if (!vm.$options.render) {
+    vm.$options.render = createEmptyVNode
+    if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') || vm.$options.el || el) {
+      console.warn(
+        'You are using the runtime-only build of Vue where the template ' +
+        'compiler is not available. Either pre-compile the templates into ' +
+        'render functions, or use the compiler-included build.',
+        vm
+      )
+    } else {
+      console.warn(
+        'Failed to mount component: template or render function not defined.',
+        vm
+      )
     }
   }
-  vm._hasHookEvent && vm.$emit(`hook:${hook}`)
-}
 
-function isInInactiveTree(vm) {
-  /*2019-12-27 20:19:47*/
-  while(vm && (vm = vm.$parent)) {
-    if (vm._inactive) return true
-  }
-  return false
-}
+  callHook(vm, 'beforeMount')
 
-function activateChildComponent(vm, direct) {
-  /*2019-12-27 20:19:40*/
-  if (direct) {
-    vm._directInactive = false
-    if (isInInactiveTree(vm)) return
-  } else if (vm._directInactive) return
+  let updateComponent
+  if (config.performance && mark) {
+    updateComponent = () => {
+      const name = vm._name
+      const id = vm._uid
+      const startTag = `vue-perf-start:${id}`
+      const endTag = `vue-perf-end:${id}`
 
-  if (vm._inactive || vm._inactive === null) {
-    vm._inactive = false
-    for (let i = 0; i < vm.$children.length; i++) {
-      activateChildComponent(vm.$children[i])
+      mark(startTag)
+      const vnode = vm._render()
+      mark(endTag)
+      measure(`vue ${name} patch`, startTag, endTag)
+
+      mark(startTag)
+      vm._update(vnode, hydrating)
+      mark(endTag)
+      measure(`vue ${name} patch`, startTag, endTag)
     }
-    callHook(vm, 'activated')
+  } else {
+    updateComponent = () => {
+      vm._update(vm._render(), hydrating)
+    }
   }
+
+  vm._watcher = new Watcher(vm, updateComponent, noop, null, true)
+  hydrating = false
+
+  if (vm.$vnode == null) {
+    vm._isMounted = true
+    callHook(vm, 'mounted')
+  }
+  return vm
 }
 
 function updateChildComponent(vm, propsData, listeners, parentVnode, renderChildren) {
   /*2019-12-26 21:29:6*/
   const hasChildren = !!(
     renderChildren || // has new static slots
-      vm.$options._renderChildren || // has old static slots
-      parentVnode.data.scopedSlots || // has new scoped slots
-      vm.$scopedSlots !== emptyObject // has old scoped slots
+    vm.$options._renderChildren || // has old static slots
+    parentVnode.data.scopedSlots || // has new scoped slots
+    vm.$scopedSlots !== emptyObject // has old scoped slots
   )
 
   vm.$options._parentVnode = parentVnode
@@ -200,6 +222,30 @@ function updateChildComponent(vm, propsData, listeners, parentVnode, renderChild
   }
 }
 
+function isInInactiveTree(vm) {
+  /*2019-12-27 20:19:47*/
+  while(vm && (vm = vm.$parent)) {
+    if (vm._inactive) return true
+  }
+  return false
+}
+
+function activateChildComponent(vm, direct) {
+  /*2019-12-27 20:19:40*/
+  if (direct) {
+    vm._directInactive = false
+    if (isInInactiveTree(vm)) return
+  } else if (vm._directInactive) return
+
+  if (vm._inactive || vm._inactive === null) {
+    vm._inactive = false
+    for (let i = 0; i < vm.$children.length; i++) {
+      activateChildComponent(vm.$children[i])
+    }
+    callHook(vm, 'activated')
+  }
+}
+
 function deactivateChildComponent(vm, direct) {
   /*2019-12-27 20:19:17*/
   if (direct) {
@@ -215,14 +261,30 @@ function deactivateChildComponent(vm, direct) {
   }
 }
 
+function callHook(vm, hook) {
+  /*2019-12-23 20:22:51*/
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    for (let i = 0, l = handlers.length; i < l; i++) {
+      try {
+        handlers[i].call(vm)
+      } catch (e) {
+        console.error(e, vm, `${hook} hook`)
+      }
+    }
+  }
+  vm._hasHookEvent && vm.$emit(`hook:${hook}`)
+}
 
 export {
-  lifecycleMixin,
-  initLifecycle,
-  callHook,
   activeInstance,
   isUpdatingChildComponent,
+  initLifecycle,
+  lifecycleMixin,
+  mountComponent,
   updateChildComponent,
+  isInInactiveTree,
   activateChildComponent,
-  deactivateChildComponent
+  deactivateChildComponent,
+  callHook
 }

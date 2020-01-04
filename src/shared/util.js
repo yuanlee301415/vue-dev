@@ -1,29 +1,42 @@
+/*2020-1-3 23:08:56*/
 const _toString = Object.prototype.toString
 
-function isDef(val) {
-  return val !== void 0 && val !== null
+function isUnDef(v) {
+  return v === void 0 || v === null
+}
+
+function isDef(v) {
+  return v !== void 0 && v !== null
+}
+
+function isTrue(v) {
+  return v === true
+}
+
+function isFalse(v) {
+  return v === false
+}
+
+function isPrimitive(v) {
+  const type = typeof v
+  return type === 'string' || type === 'number' || type === 'boolean'
 }
 
 function isObject(val) {
   return val !== null && 'object' === typeof val
 }
 
-function  hasOwn(obj, key) {
-  /*2019-12-27 20:48:46*/
-  return Object.prototype.hasOwnProperty.call(obj, key)
-}
-
-function remove (list, item) {
-  return list.splice(list.findIndex(item), 1)
-}
-
-function noop () {
-  /*2019-12-27 20:47:49*/
+function toRawType(value) {
+  return _toString.call(value).slice(8, -1)
 }
 
 function isPlainObject (obj) {
   /*2019-12-27 21:25:35*/
   return _toString.call(obj) === '[object Object]'
+}
+
+function isRegExp(v) {
+  return _toString.call(v) === '[object RegExp]'
 }
 
 function isValidArrayIndex (idx) {
@@ -32,7 +45,7 @@ function isValidArrayIndex (idx) {
 }
 
 function toString(val) {
-  return val == null ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)
+  return val == null ? '' : typeof val === 'object' ? JSON.stringify(val, null, 2) : String(val)
 }
 
 function toNumber(val) {
@@ -40,45 +53,26 @@ function toNumber(val) {
   return isNaN(n) ? val: n
 }
 
-function looseEqual(a, b) {
-  if (a === b) return true
-  const isObjA = isObject(a)
-  const isObjB = isObject(b)
-  if (isObjA && isObjB) {
-    const isAryA = Array.isArray(a)
-    const isAryB = Array.isArray(b)
-    if (isAryA && isAryB) {
-      return a.length === b.length && a.every((_, i) => looseEqual(_, b[i]))
-    } else if (!isAryA && !isAryB) {
-      const keysA = Object.keys(a)
-      const keysB = Object.keys(b)
-      return keysA.length === keysB.length && keysA.every(key => looseEqual(a[key], b[key]))
-    } else {
-      return false
-    }
-  } else if (!isObjA && !isObjB) {
-    return String(a) === String(b)
-  } {
-    return false
+function makeMap(str, expectsLowerCase) {
+  const map = Object.create(null)
+  const list = str.split(',')
+  for (let i = 0; i < list.length; i++) {
+    map[list[i]] = true
   }
+  return expectsLowerCase ? val => map[val.toLowerCase()] : val => map[val]
 }
 
-function looseIndexOf(arr, val) {
-  for (let i = 0; i < arr.length; i++) {
-    if (looseEqual(arr[i], val)) return i
-  }
-  return -1
+const isBuiltInTag = makeMap('slot,component', true)
+
+const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
+
+function remove (list, item) {
+  return list.splice(list.findIndex(item), 1)
 }
 
-function extend(target, source) {
-  for (const key in source) {
-    target[key] = source[key]
-  }
-  return target
-}
-
-function identity(_) {
-  return _
+function  hasOwn(obj, key) {
+  /*2019-12-27 20:48:46*/
+  return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
 function cached(fn) {
@@ -97,39 +91,6 @@ const capitalize = cached(str => str.charAt(0).toUpperCase() + str.slice(1))
 const hyphenateRE = /\B([A-Z])/g
 const hyphenate = cached(str => str.replace(hyphenateRE, '-$1').toLowerCase())
 
-function toObject(arr) {
-  const res = {}
-  for (let i = 0; i < arr.length; i++) {
-    arr[i] && extend(res, arr[i])
-  }
-}
-
-function makeMap(str, expectsLowerCase) {
-  const map = Object.create(null)
-  const list = str.split(',')
-  for (let i = 0; i < list.length; i++) {
-    map[list[i]] = true
-  }
-  return expectsLowerCase ? val => map[val.toLowerCase()] : val => map[val]
-}
-
-const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
-
-const no = (a, b, c) => false
-
-function toArray(list, start = 0) {
-  let i = list.length - start
-  const ret = new Array(i)
-  while (i--) {
-    ret[i] = list[i + start]
-  }
-  return ret
-}
-
-function isRegExp(v) {
-  return _toString.call(v) === '[object RegExp]'
-}
-
 function bind(fn, ctx) {
   /*2019-12-27 20:47:32*/
   function bindFn(a) {
@@ -140,25 +101,81 @@ function bind(fn, ctx) {
   return bindFn
 }
 
-function toRawType(value) {
-  return _toString.call(value).slice(8, -1)
+function toArray(list, start = 0) {
+  let i = list.length - start
+  const ret = new Array(i)
+  while (i--) {
+    ret[i] = list[i + start]
+  }
+  return ret
 }
 
-function isUnDef(v) {
-  return v === void 0 || v === null
+function extend(target, source) {
+  for (const key in source) {
+    target[key] = source[key]
+  }
+  return target
 }
 
-function isPrimitive(v) {
-  const type = typeof v
-  return v === 'string' || v === 'number' || v === 'boolean'
+function toObject(arr) {
+  const res = {}
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] && extend(res, arr[i])
+  }
 }
 
-function isTrue(v) {
-  return v === true
+function noop (a, b, c) {
+  /*2019-12-27 20:47:49*/
 }
 
-function isFalse(v) {
-  return v === false
+const no = (a, b, c) => false
+
+const identity = _ => _
+
+function genStaticKeys(modules) {
+  return modules.reduce((keys, m) => {
+    return keys.concat(m.staticKeys || [])
+  }, []).join(',')
+}
+
+function looseEqual(a, b) {
+  if (a === b) return true
+  const isObjectA = isObject(a)
+  const isObjectB = isObject(b)
+  if (isObjectA && isObjectB) {
+    try {
+      const isArrayA = Array.isArray(a)
+      const isArrayB = Array.isArray(b)
+      if (isArrayA && isArrayB) {
+        return a.length === b.length && a.every((e, i) => {
+          return looseEqual(e, b[i])
+        })
+      } else if (!isArrayA && !isArrayB) {
+        const keysA = Object.keys(a)
+        const keysB = Object.keys(b)
+        return keysA.length === keysB.length && keysA.every(key => {
+          return looseEqual(a[key], b[key])
+        })
+      } else {
+        /* istanbul ignore next */
+        return false
+      }
+    } catch (e) {
+      /* istanbul ignore next */
+      return false
+    }
+  } else if (!isObjectA && !isObjectB) {
+    return String(a) === String(b)
+  } else {
+    return false
+  }
+}
+
+function looseIndexOf(arr, val) {
+  for (let i = 0; i < arr.length; i++) {
+    if (looseEqual(arr[i], val)) return i
+  }
+  return -1
 }
 
 function once(fn) {
@@ -172,34 +189,36 @@ function once(fn) {
 }
 
 export {
+  isUnDef,
   isDef,
+  isTrue,
+  isFalse,
+  isPrimitive,
   isObject,
-  hasOwn,
-  remove,
-  noop,
+  toRawType,
   isPlainObject,
+  isRegExp,
   isValidArrayIndex,
   toString,
   toNumber,
-  looseEqual,
-  looseIndexOf,
-  extend,
-  identity,
+  makeMap,
+  isBuiltInTag,
+  isReservedAttribute,
+  remove,
+  hasOwn,
   cached,
   camelize,
   capitalize,
   hyphenate,
-  toObject,
-  makeMap,
-  isReservedAttribute,
-  no,
-  toArray,
-  isRegExp,
   bind,
-  toRawType,
-  isUnDef,
-  isPrimitive,
-  isTrue,
-  isFalse,
+  toArray,
+  extend,
+  toObject,
+  noop,
+  no,
+  identity,
+  genStaticKeys,
+  looseEqual,
+  looseIndexOf,
   once
 }

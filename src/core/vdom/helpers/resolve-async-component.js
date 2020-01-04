@@ -10,7 +10,7 @@ function resolveAsyncComponent(factory, baseCtor, context) {
   if (isDef(factory.contexts)) {
     factory.contexts.push(context)
   } else {
-    const contexts = factory.contexts = [ context ]
+    const contexts = factory.contexts = [context]
     let sync = true
 
     const forceRender = () => {
