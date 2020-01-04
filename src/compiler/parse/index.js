@@ -40,7 +40,8 @@ function createASTElement(tag, attrs, parent) {
   return {
     type: 1,
     tag,
-    attrsList: makeAttrsMap(attrs),
+    attrsList: attrs,
+    attrsMap: makeAttrsMap(attrs),
     parent,
     children: []
   }
@@ -224,7 +225,7 @@ function parse(template, options) {
         return
       }
 
-      if (isIE && currentParent.tag === 'textara' && currentParent.attrsMap.placeholder === text) return
+      if (isIE && currentParent.tag === 'textarea' && currentParent.attrsMap.placeholder === text) return
 
       const children = currentParent.children
       text = inPre || text.trim()
