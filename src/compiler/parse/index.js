@@ -1,11 +1,10 @@
-/*2020-1-3 21:53:4*/
 import he from './he.js'
-import { parseHTML } from "./html-parser.js"
-import { parseText } from "./text-parser.js"
-import { parseFilters } from "./filter-parser.js"
-import { cached, no, camelize } from "../../shared/util.js"
-import { genAssignmentCode } from "../directives/model.js"
-import { isIE, isEdge, isServerRendering } from "../../core/util/index.js"
+import { parseHTML } from './html-parser.js'
+import { parseText } from './text-parser.js'
+import { parseFilters } from './filter-parser.js'
+import { cached, no, camelize } from '../../shared/util.js'
+import { genAssignmentCode } from '../directives/model.js'
+import { isIE, isEdge, isServerRendering } from '../../core/util/env.js'
 
 import {
   addProp,
@@ -16,17 +15,21 @@ import {
   getBindingAttr,
   getAndRemoveAttr,
   pluckModuleFunction
-} from "../helpers.js"
+} from '../helpers.js'
 
-const onRE = /^@|^v-on:/
-const dirRE = /^v-|^@|^:/
-const forAliasRE = /(.*)?\s+(:in|of)\s+(.*)/
-const forIteratorRE = /\((\{[^}]*\}|[^,]*),([^,]*)(?:,([^,]*))?\)/
+export const onRE = /^@|^v-on:/
+export const dirRE = /^v-|^@|^:/
+export const forAliasRE = /(.*?)\s+(?:in|of)\s+(.*)/
+export const forIteratorRE = /\((\{[^}]*\}|[^,]*),([^,]*)(?:,([^,]*))?\)/
+
 const argRE = /:(.*)$/
 const bindRE = /^:|^v-bind:/
 const modifierRE = /\.[^.]+/g
+
 const decodeHTMLCached = cached(he.decode)
-let warn
+
+// configurable state
+export let warn
 let delimiters
 let transforms
 let preTransforms
@@ -36,7 +39,7 @@ let platformMustUseProp
 let platformGetTagNamespace
 
 
-function createASTElement(tag, attrs, parent) {
+export function createASTElement (tag, attrs, parent) {
   return {
     type: 1,
     tag,
@@ -47,8 +50,13 @@ function createASTElement(tag, attrs, parent) {
   }
 }
 
-function parse(template, options) {
-  // console.log('parse>options.modules:', JSON.stringify(options.modules))
+/**
+ * Convert HTML string to AST.
+ */
+export function parse (
+  template,
+  options
+) {
   warn = options.warn || baseWarn
 
   platformIsPreTag = options.isPreTag || no
@@ -56,27 +64,28 @@ function parse(template, options) {
   platformGetTagNamespace = options.getTagNamespace || no
 
   transforms = pluckModuleFunction(options.modules, 'transformNode')
-  preTransforms = pluckModuleFunction(options.modules, 'preTransformsNode')
-  postTransforms = pluckModuleFunction(options.modules, 'postTransformsNode')
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+  postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
 
   delimiters = options.delimiters
 
-  const stack  = []
-  const preserveWhiteSpace = options.preserveWhiteSpace !== false
+  const stack = []
+  const preserveWhitespace = options.preserveWhitespace !== false
   let root
   let currentParent
   let inVPre = false
   let inPre = false
   let warned = false
 
-  function warnOnce(msg) {
+  function warnOnce (msg) {
     if (!warned) {
       warned = true
       warn(msg)
     }
   }
 
-  function endPre(element) {
+  function endPre (element) {
+    // check pre state
     if (element.pre) {
       inVPre = false
     }
@@ -89,12 +98,16 @@ function parse(template, options) {
     warn,
     expectHTML: options.expectHTML,
     isUnaryTag: options.isUnaryTag,
-    cnaBeLeftOpenTag: options.cnaBeLeftOpenTag,
+    canBeLeftOpenTag: options.canBeLeftOpenTag,
     shouldDecodeNewlines: options.shouldDecodeNewlines,
-
-    start(tag, attrs, unary) {
+    shouldKeepComment: options.comments,
+    start (tag, attrs, unary) {
+      // check namespace.
+      // inherit parent ns if there is one
       const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
 
+      // handle IE svg bug
+      /* istanbul ignore if */
       if (isIE && ns === 'svg') {
         attrs = guardIESVGBug(attrs)
       }
@@ -113,6 +126,7 @@ function parse(template, options) {
         )
       }
 
+      // apply pre-transforms
       for (let i = 0; i < preTransforms.length; i++) {
         element = preTransforms[i](element, options) || element
       }
@@ -123,47 +137,50 @@ function parse(template, options) {
           inVPre = true
         }
       }
-
       if (platformIsPreTag(element.tag)) {
         inPre = true
       }
-
-      if (inPre) {
+      if (inVPre) {
         processRawAttrs(element)
       } else if (!element.processed) {
+        // structural directives
         processFor(element)
         processIf(element)
         processOnce(element)
+        // element-scope stuff
         processElement(element, options)
       }
 
-      function checkRootConstraints(el) {
-        if (el.tag === 'slot' || el.tag === 'template') {
-          warnOnce(
-            `Cannot use <${el.tag}> as component root element because it may ` +
-            'contain multiple nodes.'
-          )
-        }
-
-        if (el.attrsMap.hasOwnProperty('v-for')) {
-          warnOnce(
-            'Cannot use v-for on stateful component root element because ' +
-            'it renders multiple elements.'
-          )
+      function checkRootConstraints (el) {
+        if ('process.env.NODE_ENV' !== 'production') {
+          if (el.tag === 'slot' || el.tag === 'template') {
+            warnOnce(
+              `Cannot use <${el.tag}> as component root element because it may ` +
+              'contain multiple nodes.'
+            )
+          }
+          if (el.attrsMap.hasOwnProperty('v-for')) {
+            warnOnce(
+              'Cannot use v-for on stateful component root element because ' +
+              'it renders multiple elements.'
+            )
+          }
         }
       }
 
+      // tree management
       if (!root) {
         root = element
         checkRootConstraints(root)
       } else if (!stack.length) {
+        // allow root elements with v-if, v-else-if and v-else
         if (root.if && (element.elseif || element.else)) {
           checkRootConstraints(element)
           addIfCondition(root, {
             exp: element.elseif,
             block: element
           })
-        } else {
+        } else if ('process.env.NODE_ENV' !== 'production') {
           warnOnce(
             `Component template should contain exactly one root element. ` +
             `If you are using v-if on multiple elements, ` +
@@ -171,7 +188,6 @@ function parse(template, options) {
           )
         }
       }
-
       if (currentParent && !element.forbidden) {
         if (element.elseif || element.else) {
           processIfConditions(element, currentParent)
@@ -184,56 +200,59 @@ function parse(template, options) {
           element.parent = currentParent
         }
       }
-
       if (!unary) {
         currentParent = element
         stack.push(element)
       } else {
         endPre(element)
       }
-
+      // apply post-transforms
       for (let i = 0; i < postTransforms.length; i++) {
         postTransforms[i](element, options)
       }
     },
 
-    end() {
+    end () {
       // remove trailing whitespace
       const element = stack[stack.length - 1]
       const lastNode = element.children[element.children.length - 1]
       if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
         element.children.pop()
       }
-
       // pop stack
       stack.length -= 1
       currentParent = stack[stack.length - 1]
       endPre(element)
     },
 
-    chars(text) {
+    chars (text) {
       if (!currentParent) {
-        if (text === template) {
-          warnOnce(
-            'Component template requires a root element, rather than just text.'
-          )
-        } else if ((text = text.trim())) {
-          warnOnce(
-            `text "${text}" outside root element will be ignored.`
-          )
+        if ('process.env.NODE_ENV' !== 'production') {
+          if (text === template) {
+            warnOnce(
+              'Component template requires a root element, rather than just text.'
+            )
+          } else if ((text = text.trim())) {
+            warnOnce(
+              `text "${text}" outside root element will be ignored.`
+            )
+          }
         }
         return
       }
-
-      if (isIE && currentParent.tag === 'textarea' && currentParent.attrsMap.placeholder === text) return
-
+      // IE textarea placeholder bug
+      /* istanbul ignore if */
+      if (isIE &&
+        currentParent.tag === 'textarea' &&
+        currentParent.attrsMap.placeholder === text
+      ) {
+        return
+      }
       const children = currentParent.children
       text = inPre || text.trim()
-        ? isTextTag(currentParent)
-          ? text : decodeHTMLCached(text)
-        : preserveWhiteSpace && children.length
-          ? ' ' : ''
-
+        ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
+        // only preserve whitespace if its not right after a starting tag
+        : preserveWhitespace && children.length ? ' ' : ''
       if (text) {
         let expression
         if (!inVPre && text !== ' ' && (expression = parseText(text, delimiters))) {
@@ -250,8 +269,7 @@ function parse(template, options) {
         }
       }
     },
-
-    comment(text) {
+    comment (text) {
       currentParent.children.push({
         type: 3,
         text,
@@ -259,17 +277,16 @@ function parse(template, options) {
       })
     }
   })
-
   return root
 }
 
-function processPre(el) {
+function processPre (el) {
   if (getAndRemoveAttr(el, 'v-pre') != null) {
     el.pre = true
   }
 }
 
-function processRawAttrs(el) {
+function processRawAttrs (el) {
   const l = el.attrsList.length
   if (l) {
     const attrs = el.attrs = new Array(l)
@@ -280,13 +297,17 @@ function processRawAttrs(el) {
       }
     }
   } else if (!el.pre) {
+    // non root node in pre blocks with no attributes
     el.plain = true
   }
 }
 
-function processElement(element, options) {
+export function processElement (element, options) {
   processKey(element)
-  element.plain = !element.key && !element.attrs.length
+
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
 
   processRef(element)
   processSlot(element)
@@ -297,30 +318,30 @@ function processElement(element, options) {
   processAttrs(element)
 }
 
-function processKey(el) {
+function processKey (el) {
   const exp = getBindingAttr(el, 'key')
   if (exp) {
-    if (el.tag === 'template') {
+    if ('process.env.NODE_ENV' !== 'production' && el.tag === 'template') {
       warn(`<template> cannot be keyed. Place the key on real elements instead.`)
     }
     el.key = exp
   }
 }
 
-function processRef(el) {
+function processRef (el) {
   const ref = getBindingAttr(el, 'ref')
   if (ref) {
     el.ref = ref
-    el.refer = checkInFor(el)
+    el.refInFor = checkInFor(el)
   }
 }
 
-function processFor(el) {
-  const exp = getAndRemoveAttr(el, 'v-for')
-  if (exp) {
+export function processFor (el) {
+  let exp
+  if ((exp = getAndRemoveAttr(el, 'v-for'))) {
     const inMatch = exp.match(forAliasRE)
     if (!inMatch) {
-      warn(
+      'process.env.NODE_ENV' !== 'production' && warn(
         `Invalid v-for expression: ${exp}`
       )
       return
@@ -340,33 +361,33 @@ function processFor(el) {
   }
 }
 
-function processIf(el) {
+function processIf (el) {
   const exp = getAndRemoveAttr(el, 'v-if')
   if (exp) {
     el.if = exp
     addIfCondition(el, {
-      exp,
+      exp: exp,
       block: el
     })
   } else {
     if (getAndRemoveAttr(el, 'v-else') != null) {
       el.else = true
     }
-    const elseif = getAndRemoveAttr('v-else-if')
+    const elseif = getAndRemoveAttr(el, 'v-else-if')
     if (elseif) {
       el.elseif = elseif
     }
   }
 }
 
-function processIfConditions(el, parent) {
+function processIfConditions (el, parent) {
   const prev = findPrevElement(parent.children)
   if (prev && prev.if) {
     addIfCondition(prev, {
       exp: el.elseif,
       block: el
     })
-  } else {
+  } else if ('process.env.NODE_ENV' !== 'production') {
     warn(
       `v-${el.elseif ? ('else-if="' + el.elseif + '"') : 'else'} ` +
       `used on element <${el.tag}> without corresponding v-if.`
@@ -374,13 +395,13 @@ function processIfConditions(el, parent) {
   }
 }
 
-function findPrevElement(children) {
+function findPrevElement (children) {
   let i = children.length
   while (i--) {
     if (children[i].type === 1) {
       return children[i]
     } else {
-      if (children[i].text !== ' ') {
+      if ('process.env.NODE_ENV' !== 'production' && children[i].text !== ' ') {
         warn(
           `text "${children[i].text.trim()}" between v-if and v-else(-if) ` +
           `will be ignored.`
@@ -391,23 +412,24 @@ function findPrevElement(children) {
   }
 }
 
-function addIfCondition(el, condition) {
+export function addIfCondition (el, condition) {
   if (!el.ifConditions) {
     el.ifConditions = []
   }
   el.ifConditions.push(condition)
 }
 
-function processOnce(el) {
-  if (getAndRemoveAttr(el, 'v-once') != null) {
+function processOnce (el) {
+  const once = getAndRemoveAttr(el, 'v-once')
+  if (once != null) {
     el.once = true
   }
 }
 
-function processSlot(el) {
+function processSlot (el) {
   if (el.tag === 'slot') {
     el.slotName = getBindingAttr(el, 'name')
-    if (el.key) {
+    if ('process.env.NODE_ENV' !== 'production' && el.key) {
       warn(
         `\`key\` does not work on <slot> because slots are abstract outlets ` +
         `and can possibly expand into multiple elements. ` +
@@ -418,7 +440,8 @@ function processSlot(el) {
     let slotScope
     if (el.tag === 'template') {
       slotScope = getAndRemoveAttr(el, 'scope')
-      if (slotScope) {
+      /* istanbul ignore if */
+      if ('process.env.NODE_ENV' !== 'production' && slotScope) {
         warn(
           `the "scope" attribute for scoped slots have been deprecated and ` +
           `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
@@ -431,131 +454,131 @@ function processSlot(el) {
     } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
       el.slotScope = slotScope
     }
-
     const slotTarget = getBindingAttr(el, 'slot')
-    if (slotScope) {
+    if (slotTarget) {
       el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
-      if (!el.slotTarget) {
+      // preserve slot as an attribute for native shadow DOM compat
+      // only for non-scoped slots.
+      if (!el.slotScope) {
         addAttr(el, 'slot', slotTarget)
       }
     }
   }
 }
 
-function processComponent(el) {
-  const binding = getBindingAttr(el, 'is')
-  if (binding) {
+function processComponent (el) {
+  let binding
+  if ((binding = getBindingAttr(el, 'is'))) {
     el.component = binding
   }
-  if (getBindingAttr(el, 'inline-template') != null) {
+  if (getAndRemoveAttr(el, 'inline-template') != null) {
     el.inlineTemplate = true
   }
 }
 
-function processAttrs(el) {
+function processAttrs (el) {
   const list = el.attrsList
   let i, l, name, rawName, value, modifiers, isProp
   for (i = 0, l = list.length; i < l; i++) {
     name = rawName = list[i].name
     value = list[i].value
-
     if (dirRE.test(name)) {
+      // mark element as dynamic
       el.hasBindings = true
+      // modifiers
       modifiers = parseModifiers(name)
-
       if (modifiers) {
         name = name.replace(modifierRE, '')
       }
-
       if (bindRE.test(name)) { // v-bind
         name = name.replace(bindRE, '')
         value = parseFilters(value)
         isProp = false
-
         if (modifiers) {
-
           if (modifiers.prop) {
             isProp = true
             name = camelize(name)
-
-            if (name === 'innerHTML') name = 'innerHTML'
+            if (name === 'innerHtml') name = 'innerHTML'
           }
-
           if (modifiers.camel) {
             name = camelize(name)
           }
-
-          if (modifiers.async) {
+          if (modifiers.sync) {
             addHandler(
               el,
               `update:${camelize(name)}`,
-              genAssignmentCode(value, '$event')
+              genAssignmentCode(value, `$event`)
             )
           }
         }
-
-        if (isProp || (!el.componennt && platformMustUseProp(el.tag, el.attrsMap.type, name))) {
+        if (isProp || (
+          !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
+        )) {
           addProp(el, name, value)
         } else {
           addAttr(el, name, value)
         }
-
       } else if (onRE.test(name)) { // v-on
         name = name.replace(onRE, '')
-        addHandler(el, name,value, modifiers, false, warn)
+        addHandler(el, name, value, modifiers, false, warn)
       } else { // normal directives
         name = name.replace(dirRE, '')
+        // parse arg
         const argMatch = name.match(argRE)
         const arg = argMatch && argMatch[1]
-
         if (arg) {
           name = name.slice(0, -(arg.length + 1))
         }
-
         addDirective(el, name, rawName, value, arg, modifiers)
-
-        if (name === 'model') {
+        if ('process.env.NODE_ENV' !== 'production' && name === 'model') {
           checkForAliasModel(el, value)
         }
       }
     } else {
       // literal attribute
-      if (parseText(value, delimiters)) {
-        warn(
-          `${name}="${value}": ` +
-          'Interpolation inside attributes has been removed. ' +
-          'Use v-bind or the colon shorthand instead. For example, ' +
-          'instead of <div id="{{ val }}">, use <div :id="val">.'
-        )
+      if ('process.env.NODE_ENV' !== 'production') {
+        const expression = parseText(value, delimiters)
+        if (expression) {
+          warn(
+            `${name}="${value}": ` +
+            'Interpolation inside attributes has been removed. ' +
+            'Use v-bind or the colon shorthand instead. For example, ' +
+            'instead of <div id="{{ val }}">, use <div :id="val">.'
+          )
+        }
       }
       addAttr(el, name, JSON.stringify(value))
     }
   }
 }
 
-function checkInFor(el) {
+function checkInFor (el) {
   let parent = el
   while (parent) {
-    if (parent.for !== void 0) return true
+    if (parent.for !== undefined) {
+      return true
+    }
     parent = parent.parent
   }
   return false
 }
 
-function parseModifiers(name) {
+function parseModifiers (name) {
   const match = name.match(modifierRE)
   if (match) {
     const ret = {}
-    match.forEach(m => {
-      ret[m.slice(1)] = true
-    })
+    match.forEach(m => { ret[m.slice(1)] = true })
+    return ret
   }
 }
 
-function makeAttrsMap(attrs) {
+function makeAttrsMap (attrs) {
   const map = {}
   for (let i = 0, l = attrs.length; i < l; i++) {
-    if (map[attrs[i].name] && !isIE && !isEdge) {
+    if (
+      'process.env.NODE_ENV' !== 'production' &&
+      map[attrs[i].name] && !isIE && !isEdge
+    ) {
       warn('duplicate attribute: ' + attrs[i].name)
     }
     map[attrs[i].name] = attrs[i].value
@@ -563,24 +586,28 @@ function makeAttrsMap(attrs) {
   return map
 }
 
-function isTextTag(el) {
+// for script (e.g. type="x/template") or style, do not decode content
+function isTextTag (el) {
   return el.tag === 'script' || el.tag === 'style'
 }
 
-function isForbiddenTag(el) {
+function isForbiddenTag (el) {
   return (
     el.tag === 'style' ||
-    (el.tag === 'script' && (!el.attrsMap.type || el.attrsMap.type === 'text/javascript')
-    )
+    (el.tag === 'script' && (
+      !el.attrsMap.type ||
+      el.attrsMap.type === 'text/javascript'
+    ))
   )
 }
 
 const ieNSBug = /^xmlns:NS\d+/
 const ieNSPrefix = /^NS\d+:/
 
-function guardIESVGBug(attrs) {
+/* istanbul ignore next */
+function guardIESVGBug (attrs) {
   const res = []
-  for (let i =0; i < attrs.length; i++) {
+  for (let i = 0; i < attrs.length; i++) {
     const attr = attrs[i]
     if (!ieNSBug.test(attr.name)) {
       attr.name = attr.name.replace(ieNSPrefix, '')
@@ -590,7 +617,7 @@ function guardIESVGBug(attrs) {
   return res
 }
 
-function checkForAliasModel(el, value) {
+function checkForAliasModel (el, value) {
   let _el = el
   while (_el) {
     if (_el.for && _el.alias === value) {
@@ -605,18 +632,3 @@ function checkForAliasModel(el, value) {
     _el = _el.parent
   }
 }
-
-export {
-  createASTElement,
-  onRE,
-  dirRE,
-  forAliasRE,
-  forIteratorRE,
-  decodeHTMLCached,
-  warn,
-  parse,
-  processElement,
-  processFor,
-  addIfCondition
-}
-

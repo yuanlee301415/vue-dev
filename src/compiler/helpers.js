@@ -76,6 +76,7 @@ function getBindingAttr(el, name, getStatic) {
 }
 
 function getAndRemoveAttr(el, name, removeFromMap) {
+  console.log('getAndRemoveAttr>el:', JSON.stringify(el))
   const val = el.attrsMap[name]
   if (val != null) {
     const list = el.attrsList
