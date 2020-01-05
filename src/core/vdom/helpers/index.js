@@ -1,4 +1,6 @@
-/*2019-12-30 21:51:10*/
+/*override*/
+/* @flow */
+
 export * from './merge-hook.js'
 export * from './extract-props.js'
 export * from './update-listeners.js'

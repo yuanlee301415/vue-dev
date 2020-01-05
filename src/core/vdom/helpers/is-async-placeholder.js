@@ -1,7 +1,6 @@
-function isAsyncPlaceholder(node) {
-  return node.isComment && node.asyncFactory
-}
+/*override*/
+/* @flow */
 
-export {
-  isAsyncPlaceholder
+export function isAsyncPlaceholder (node) {
+  return node.isComment && node.asyncFactory
 }

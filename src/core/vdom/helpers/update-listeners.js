@@ -1,10 +1,13 @@
-/*2019-12-23 22:33:16*/
-import { cached, isUnDef } from '../../util/index.js'
+/*override*/
+/* @flow */
 
-const normalizeEvent = cached(name => {
+import { warn } from '../../../core/util/index.js'
+import { cached, isUndef } from '../../../shared/util.js'
+
+const normalizeEvent = cached((name) => {
   const passive = name.charAt(0) === '&'
   name = passive ? name.slice(1) : name
-  const once = name.charAt(0) === '~'
+  const once = name.charAt(0) === '~' // Prefixed last, checked first
   name = once ? name.slice(1) : name
   const capture = name.charAt(0) === '!'
   name = capture ? name.slice(1) : name
@@ -16,8 +19,8 @@ const normalizeEvent = cached(name => {
   }
 })
 
-function createFnInvoker(fns) {
-  function invoker() {
+export function createFnInvoker (fns) {
+  function invoker () {
     const fns = invoker.fns
     if (Array.isArray(fns)) {
       const cloned = fns.slice()
@@ -25,6 +28,7 @@ function createFnInvoker(fns) {
         cloned[i].apply(null, arguments)
       }
     } else {
+      // return handler return value for single handlers
       return fns.apply(null, arguments)
     }
   }
@@ -32,19 +36,25 @@ function createFnInvoker(fns) {
   return invoker
 }
 
-function updateListeners(on, oldOn, add, remove, vm) {
+export function updateListeners (
+  on,
+  oldOn,
+  add,
+  remove,
+  vm
+) {
   let name, cur, old, event
   for (name in on) {
     cur = on[name]
     old = oldOn[name]
     event = normalizeEvent(name)
-    if (isUnDef(cur)) {
-      console.warn(
+    if (isUndef(cur)) {
+      'process.env.NODE_ENV' !== 'production' && warn(
         `Invalid handler for event "${event.name}": got ` + String(cur),
         vm
       )
-    } else if (isUnDef(old)) {
-      if (isUnDef(cur.fns)) {
+    } else if (isUndef(old)) {
+      if (isUndef(cur.fns)) {
         cur = on[name] = createFnInvoker(cur)
       }
       add(event.name, cur, event.once, event.capture, event.passive)
@@ -53,16 +63,10 @@ function updateListeners(on, oldOn, add, remove, vm) {
       on[name] = old
     }
   }
-  for (name in old) {
-    if (isUnDef(on[name])) {
+  for (name in oldOn) {
+    if (isUndef(on[name])) {
       event = normalizeEvent(name)
       remove(event.name, oldOn[name], event.capture)
     }
   }
-}
-
-
-export {
-  updateListeners,
-  createFnInvoker
 }

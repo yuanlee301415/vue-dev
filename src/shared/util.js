@@ -5,6 +5,10 @@ function isUnDef(v) {
   return v === void 0 || v === null
 }
 
+function isUndef(v) {
+  return v === void 0 || v === null
+}
+
 function isDef(v) {
   return v !== void 0 && v !== null
 }
@@ -189,6 +193,7 @@ function once(fn) {
 }
 
 export {
+  isUndef,
   isUnDef,
   isDef,
   isTrue,

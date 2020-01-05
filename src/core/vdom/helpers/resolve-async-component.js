@@ -1,13 +1,62 @@
-import { createEmptyVNode } from "../vnode.js"
-import { isDef, isObject, isTrue, isUnDef, once, hasSymbol } from "../../util/index.js"
+/*override*/
+/* @flow */
 
-function resolveAsyncComponent(factory, baseCtor, context) {
-  /*2019-12-25 21:11:23*/
-  if (isTrue(factory.error) && isDef(factory.errorComp)) return factory.resolved
+import {
+  warn,
+  once,
+  isDef,
+  isUndef,
+  isTrue,
+  isObject,
+  hasSymbol
+} from '../../../core/util/index.js'
 
-  if (isDef(factory.resolved)) return factory.resolved
+import { createEmptyVNode } from '../../../core/vdom/vnode.js'
+
+function ensureCtor (comp, base) {
+  if (
+    comp.__esModule ||
+    (hasSymbol && comp[Symbol.toStringTag] === 'Module')
+  ) {
+    comp = comp.default
+  }
+  return isObject(comp)
+    ? base.extend(comp)
+    : comp
+}
+
+export function createAsyncPlaceholder (
+  factory,
+  data,
+  context,
+  children,
+  tag
+) {
+  const node = createEmptyVNode()
+  node.asyncFactory = factory
+  node.asyncMeta = { data, context, children, tag }
+  return node
+}
+
+export function resolveAsyncComponent (
+  factory,
+  baseCtor,
+  context
+) {
+  if (isTrue(factory.error) && isDef(factory.errorComp)) {
+    return factory.errorComp
+  }
+
+  if (isDef(factory.resolved)) {
+    return factory.resolved
+  }
+
+  if (isTrue(factory.loading) && isDef(factory.loadingComp)) {
+    return factory.loadingComp
+  }
 
   if (isDef(factory.contexts)) {
+    // already pending
     factory.contexts.push(context)
   } else {
     const contexts = factory.contexts = [context]
@@ -19,23 +68,33 @@ function resolveAsyncComponent(factory, baseCtor, context) {
       }
     }
 
-    const resolve = once(res => {
+    const resolve = once((res) => {
+      // cache resolved
       factory.resolved = ensureCtor(res, baseCtor)
-      !sync && forceRender()
+      // invoke callbacks only if this is not a synchronous resolve
+      // (async resolves are shimmed as synchronous during SSR)
+      if (!sync) {
+        forceRender()
+      }
     })
 
     const reject = once(reason => {
-      console.warn(`Failed to resolve async component: ${String(factory)}` + (reason ? `\nReason: ${reason}` : ''))
+      'process.env.NODE_ENV' !== 'production' && warn(
+        `Failed to resolve async component: ${String(factory)}` +
+        (reason ? `\nReason: ${reason}` : '')
+      )
       if (isDef(factory.errorComp)) {
         factory.error = true
         forceRender()
       }
     })
 
-    const res = factory(resolve, resolve)
+    const res = factory(resolve, reject)
+
     if (isObject(res)) {
       if (typeof res.then === 'function') {
-        if (isUnDef(factory.resolved)) {
+        // () => Promise
+        if (isUndef(factory.resolved)) {
           res.then(resolve, reject)
         }
       } else if (isDef(res.component) && typeof res.component.then === 'function') {
@@ -51,7 +110,7 @@ function resolveAsyncComponent(factory, baseCtor, context) {
             factory.loading = true
           } else {
             setTimeout(() => {
-              if (isUnDef(factory.resolved) && isUnDef(factory.error)) {
+              if (isUndef(factory.resolved) && isUndef(factory.error)) {
                 factory.loading = true
                 forceRender()
               }
@@ -61,8 +120,12 @@ function resolveAsyncComponent(factory, baseCtor, context) {
 
         if (isDef(res.timeout)) {
           setTimeout(() => {
-            if (isUnDef(factory.resolved)) {
-              reject(`timeout (${res.timeout}ms)`)
+            if (isUndef(factory.resolved)) {
+              reject(
+                'process.env.NODE_ENV' !== 'production'
+                  ? `timeout (${res.timeout}ms)`
+                  : null
+              )
             }
           }, res.timeout)
         }
@@ -70,27 +133,9 @@ function resolveAsyncComponent(factory, baseCtor, context) {
     }
 
     sync = false
-    return factory.loading ? factory.loadingComp : factory.resolved
+    // return in case resolved synchronously
+    return factory.loading
+      ? factory.loadingComp
+      : factory.resolved
   }
-}
-
-function createAsyncPlaceholder(factory, data, context, children, tag) {
-  /*2019-12-26 22:15:9*/
-  const node = createEmptyVNode()
-  node.asyncFactory = factory
-  node.asyncMeta = { data, context, children, tag }
-  return node
-}
-
-function ensureCtor(comp, base) {
-  if (comp.__esModel || (hasSymbol && comp[Symbol.toStringTag] === 'Module')) {
-    comp = comp.default
-  }
-  return isObject(comp) ? base.extend(comp) : comp
-}
-
-
-export {
-  resolveAsyncComponent,
-  createAsyncPlaceholder
 }
