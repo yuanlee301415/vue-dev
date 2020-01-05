@@ -1,89 +1,109 @@
+/*override*/
+/* @flow */
+
+import config from '../config.js'
+import { initProxy } from './proxy.js'
 import { initState } from './state.js'
-import { initRender } from "./render.js"
-import { initEvents } from "./events.js"
-import { initLifecycle, callHook } from "./lifecycle.js"
+import { initRender } from './render.js'
+import { initEvents } from './events.js'
+import { mark, measure } from '../util/perf.js'
+import { initLifecycle, callHook } from './lifecycle.js'
 import { initProvide, initInjections } from './inject.js'
-import { extend, mergeOptions } from "../util/index.js"
+import { extend, mergeOptions, formatComponentName } from '../util/index.js'
 
 let uid = 0
 
-function initMixin(Vue) {
-  console.info('>>initMixin')
-  console.log('Vue.prototype._init')
-
+export function initMixin (Vue) {
   Vue.prototype._init = function (options) {
-    console.log(`Vue.prototype._init`)
-    this._uid = ++uid
-    this._isVue = true
+    const vm = this
+    // a uid
+    vm._uid = uid++
+
+    let startTag, endTag
+    /* istanbul ignore if */
+    if ('process.env.NODE_ENV' !== 'production' && config.performance && mark) {
+      startTag = `vue-perf-start:${vm._uid}`
+      endTag = `vue-perf-end:${vm._uid}`
+      mark(startTag)
+    }
+
+    // a flag to avoid this being observed
+    vm._isVue = true
+    // merge options
     if (options && options._isComponent) {
-      initInternalComponent(this, options)
+      // optimize internal component instantiation
+      // since dynamic options merging is pretty slow, and none of the
+      // internal component options needs special treatment.
+      initInternalComponent(vm, options)
     } else {
-      this.$options = mergeOptions(
-        resolveConstructorOptions(this.constructor),
+      vm.$options = mergeOptions(
+        resolveConstructorOptions(vm.constructor),
         options || {},
-        this
+        vm
       )
     }
-    console.log(`this.$options:`, this.$options)
+    /* istanbul ignore else */
+    if ('process.env.NODE_ENV' !== 'production') {
+      initProxy(vm)
+    } else {
+      vm._renderProxy = vm
+    }
+    // expose real self
+    vm._self = vm
+    initLifecycle(vm)
+    initEvents(vm)
+    initRender(vm)
+    callHook(vm, 'beforeCreate')
+    initInjections(vm) // resolve injections before data/props
+    initState(vm)
+    initProvide(vm) // resolve provide after data/props
+    callHook(vm, 'created')
 
-    this._renderProxy = this
-    console.log(`this._renderProxy`, this._renderProxy)
+    /* istanbul ignore if */
+    if ('process.env.NODE_ENV' !== 'production' && config.performance && mark) {
+      vm._name = formatComponentName(vm, false)
+      mark(endTag)
+      measure(`vue ${vm._name} init`, startTag, endTag)
+    }
 
-    this._self = this
-    console.log(`this._self`, this._self)
-
-    console.group('initLifecycle')
-    initLifecycle(this)
-    console.groupEnd('initLifecycle')
-
-    console.group('initEvents')
-    initEvents(this)
-    console.groupEnd('51-initEvents')
-
-    console.group('initRender')
-    initRender(this)
-    console.groupEnd('initRender')
-
-    callHook(this, 'beforeCreate')
-    console.info('callHook:beforeCreate')
-
-    console.group('initInjections')
-    initInjections(this)
-    console.groupEnd('initInjections')
-
-    console.group('initState')
-    initState(this)
-    console.groupEnd('initState')
-
-    initProvide(this)
-
-    callHook(this, 'created')
-
-    if (this.$options.el) {
-      this.$mount(this.$options.el)
+    if (vm.$options.el) {
+      vm.$mount(vm.$options.el)
     }
   }
 }
 
-function initInternalComponent(vm, options) {
+function initInternalComponent (vm, options) {
   const opts = vm.$options = Object.create(vm.constructor.options)
-  ~['parent', 'propsDada', '_parentVnode', '_parentListeners', '_renderChildren', '_componentTag', '_parentElm', '_refElm'].forEach(p => opts[p] = options[p])
+  // doing this because it's faster than dynamic enumeration.
+  opts.parent = options.parent
+  opts.propsData = options.propsData
+  opts._parentVnode = options._parentVnode
+  opts._parentListeners = options._parentListeners
+  opts._renderChildren = options._renderChildren
+  opts._componentTag = options._componentTag
+  opts._parentElm = options._parentElm
+  opts._refElm = options._refElm
   if (options.render) {
     opts.render = options.render
     opts.staticRenderFns = options.staticRenderFns
   }
 }
 
-function resolveConstructorOptions(Ctor) {
-  /*2019-12-26 22:16:3*/
+export function resolveConstructorOptions (Ctor) {
   let options = Ctor.options
   if (Ctor.super) {
     const superOptions = resolveConstructorOptions(Ctor.super)
     const cachedSuperOptions = Ctor.superOptions
     if (superOptions !== cachedSuperOptions) {
+      // super option changed,
+      // need to resolve new options.
       Ctor.superOptions = superOptions
+      // check if there are any late-modified/attached options (#4976)
       const modifiedOptions = resolveModifiedOptions(Ctor)
-      modifiedOptions && extend(Ctor.extendOptions, modifiedOptions)
+      // update base extend options
+      if (modifiedOptions) {
+        extend(Ctor.extendOptions, modifiedOptions)
+      }
       options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)
       if (options.name) {
         options.components[options.name] = Ctor
@@ -93,7 +113,7 @@ function resolveConstructorOptions(Ctor) {
   return options
 }
 
-function resolveModifiedOptions(Ctor) {
+function resolveModifiedOptions (Ctor) {
   let modified
   const latest = Ctor.options
   const extended = Ctor.extendOptions
@@ -107,13 +127,16 @@ function resolveModifiedOptions(Ctor) {
   return modified
 }
 
-function dedupe(latest, extended, sealed) {
+function dedupe (latest, extended, sealed) {
+  // compare latest and sealed to ensure lifecycle hooks won't be duplicated
+  // between merges
   if (Array.isArray(latest)) {
     const res = []
     sealed = Array.isArray(sealed) ? sealed : [sealed]
-    extended = Array.isArray(extended) ? extended: [extended]
+    extended = Array.isArray(extended) ? extended : [extended]
     for (let i = 0; i < latest.length; i++) {
-      if (extended.includes(latest[i]) || !sealed.includes(extended[i])) {
+      // push original options and not sealed options to exclude duplicated options
+      if (extended.indexOf(latest[i]) >= 0 || sealed.indexOf(latest[i]) < 0) {
         res.push(latest[i])
       }
     }
@@ -121,9 +144,4 @@ function dedupe(latest, extended, sealed) {
   } else {
     return latest
   }
-}
-
-export {
-  initMixin,
-  resolveConstructorOptions
 }
