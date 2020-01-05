@@ -1,20 +1,31 @@
-import { def } from "../util/index.js"
+/*override*/
+/*
+ * not type checking this file because flow doesn't play well with
+ * dynamically accessing methods on Array prototype
+ */
+
+import { def } from '../util/index.js'
 
 const arrayProto = Array.prototype
-const arrayMethods = Object.create(arrayProto)
+export const arrayMethods = Object.create(arrayProto)
 
-~[
-  'splice',
+/**
+ * Intercept mutating methods and emit events
+ */
+;[
   'push',
   'pop',
   'shift',
   'unshift',
+  'splice',
   'sort',
   'reverse'
-].forEach(method => {
-  const origin = arrayProto[method]
+]
+.forEach(function (method) {
+  // cache original method
+  const original = arrayProto[method]
   def(arrayMethods, method, function mutator (...args) {
-    const ret = origin.apply(this, args)
+    const result = original.apply(this, args)
     const ob = this.__ob__
     let inserted
     switch (method) {
@@ -27,11 +38,8 @@ const arrayMethods = Object.create(arrayProto)
         break
     }
     if (inserted) ob.observeArray(inserted)
+    // notify change
     ob.dep.notify()
-    return ret
+    return result
   })
 })
-
-export {
-  arrayMethods
-}

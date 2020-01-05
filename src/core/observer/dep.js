@@ -1,9 +1,20 @@
-/*2019-12-22 14:0:32*/
+/*override*/
+/* @flow */
+
+// import type Watcher from './watcher'
 import { remove } from '../util/index.js'
 
 let uid = 0
 
-class Dep {
+/**
+ * A dep is an observable that can have multiple
+ * directives subscribing to it.
+ */
+export default class Dep {
+  static target;
+  id;
+  subs;
+
   constructor () {
     this.id = uid++
     this.subs = []
@@ -18,31 +29,31 @@ class Dep {
   }
 
   depend () {
-    Dep.target && Dep.target.addDep(this)
+    if (Dep.target) {
+      Dep.target.addDep(this)
+    }
   }
 
   notify () {
-    this.subs.forEach(sub => sub.update())
+    // stabilize the subscriber list first
+    const subs = this.subs.slice()
+    for (let i = 0, l = subs.length; i < l; i++) {
+      subs[i].update()
+    }
   }
 }
 
+// the current target watcher being evaluated.
+// this is globally unique because there could be only one
+// watcher being evaluated at any time.
 Dep.target = null
 const targetStack = []
 
-function pushTarget (target) {
-  /*2019-12-27 22:9:20*/
-  Dep.target && targetStack.push(target)
-  Dep.target = target
+export function pushTarget (_target) {
+  if (Dep.target) targetStack.push(Dep.target)
+  Dep.target = _target
 }
 
-function popTarget () {
-  /*2019-12-27 22:9:20*/
+export function popTarget () {
   Dep.target = targetStack.pop()
-}
-
-export default Dep
-
-export {
-  pushTarget,
-  popTarget
 }
