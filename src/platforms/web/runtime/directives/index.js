@@ -1,3 +1,4 @@
+/*override*/
 import model from './model.js'
 import show from './show.js'
 
