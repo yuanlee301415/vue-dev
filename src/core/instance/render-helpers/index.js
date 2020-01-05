@@ -1,16 +1,18 @@
-import { toNumber, toString, looseEqual, looseIndexOf } from "../../util/index.js"
-import { createTextVNode, createEmptyVNode } from "../../vdom/vnode.js"
+/*override*/
+/* @flow */
+
+import { toNumber, toString, looseEqual, looseIndexOf } from '../../../shared/util.js'
+import { createTextVNode, createEmptyVNode } from '../../../core/vdom/vnode.js'
 import { renderList } from './render-list.js'
 import { renderSlot } from './render-slot.js'
-import { resolveFilter} from "./resolve-filter.js"
+import { resolveFilter } from './resolve-filter.js'
 import { checkKeyCodes } from './check-keycodes.js'
 import { bindObjectProps } from './bind-object-props.js'
 import { renderStatic, markOnce } from './render-static.js'
 import { bindObjectListeners } from './bind-object-listeners.js'
 import { resolveScopedSlots } from './resolve-slots.js'
 
-function installRenderHelpers(target) {
-  console.log('>>installRenderHelpers')
+export function installRenderHelpers (target) {
   target._o = markOnce
   target._n = toNumber
   target._s = toString
@@ -26,8 +28,4 @@ function installRenderHelpers(target) {
   target._e = createEmptyVNode
   target._u = resolveScopedSlots
   target._g = bindObjectListeners
-}
-
-export {
-  installRenderHelpers
 }
