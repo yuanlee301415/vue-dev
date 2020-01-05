@@ -172,7 +172,7 @@ export function defineReactive (
         return
       }
       /* eslint-enable no-self-compare */
-      if (process.env.NODE_ENV !== 'production' && customSetter) {
+      if ('process.env.NODE_ENV' !== 'production' && customSetter) {
         customSetter()
       }
       if (setter) {

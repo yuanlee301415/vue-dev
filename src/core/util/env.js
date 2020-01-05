@@ -1,58 +1,75 @@
-/*2019-12-21 21:30:9*/
-const hasProto = '__proto__' in {}
+/*override*/
+/* @flow */
 
-const inBrowser = typeof window !== 'undefined'
-const UA = inBrowser && window.navigator.userAgent.toLowerCase()
-const isIE = UA && /msie|trident/.test(UA)
-const isIE9 = UA && UA.includes('msie 9.0')
-const isEdge = UA && UA.includes('edge/')
-const isAndroid = UA ** UA.includes('android')
-const isIOS = UA && /iphone|ipad|ios/.test(UA)
-const isChrome = UA && /chrome\/\d+/.test(UA) && !isEdge
+// can we use __proto__?
+export const hasProto = '__proto__' in {}
 
-const nativeWatch = ({}).watch
+// Browser environment sniffing
+export const inBrowser = typeof window !== 'undefined'
+export const UA = inBrowser && window.navigator.userAgent.toLowerCase()
+export const isIE = UA && /msie|trident/.test(UA)
+export const isIE9 = UA && UA.indexOf('msie 9.0') > 0
+export const isEdge = UA && UA.indexOf('edge/') > 0
+export const isAndroid = UA && UA.indexOf('android') > 0
+export const isIOS = UA && /iphone|ipad|ipod|ios/.test(UA)
+export const isChrome = UA && /chrome\/\d+/.test(UA) && !isEdge
 
-let supportsPassive = false
+// Firefox has a "watch" function on Object.prototype...
+export const nativeWatch = ({}).watch
 
+export let supportsPassive = false
 if (inBrowser) {
   try {
     const opts = {}
-    Object.defineProperty(opts, 'passive',{
+    Object.defineProperty(opts, 'passive', ({
       get () {
+        /* istanbul ignore next */
         supportsPassive = true
       }
-    })
+    })) // https://github.com/facebook/flow/issues/285
     window.addEventListener('test-passive', null, opts)
   } catch (e) {}
 }
 
+// this needs to be lazy-evaled because vue may be required before
+// vue-server-renderer can set VUE_ENV
 let _isServer
-const isServerRendering = () => {
-  /*2019-12-27 21:52:16*/
-  if (_isServer === void 0) {
-    if (!inBrowser && typeof global === 'undefined') {
+export const isServerRendering = () => {
+/*  if (_isServer === undefined) {
+    /!* istanbul ignore if *!/
+    if (!inBrowser && typeof global !== 'undefined') {
+      // detect presence of vue-server-renderer and avoid
+      // Webpack shimming the process
       _isServer = global['process'].env.VUE_ENV === 'server'
     } else {
       _isServer = false
     }
-  }
+  }*/
   return _isServer
 }
 
-const devtools = inBrowser && window.__VUE__DEVTOOLS_GLOBAL_HOOK__
+// detect devtools
+export const devtools = inBrowser && window.__VUE_DEVTOOLS_GLOBAL_HOOK__
 
-function isNative(Ctor) {
+/* istanbul ignore next */
+export function isNative (Ctor) {
   return typeof Ctor === 'function' && /native code/.test(Ctor.toString())
 }
 
-const hasSymbol = typeof Symbol !== 'undefined' && isNative(Symbol) && typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys)
+export const hasSymbol =
+  typeof Symbol !== 'undefined' && isNative(Symbol) &&
+  typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys)
 
 let _Set
+/* istanbul ignore if */ // $flow-disable-line
 if (typeof Set !== 'undefined' && isNative(Set)) {
+  // use native Set when available.
   _Set = Set
 } else {
+  // a non-standard Set polyfill that only works with primitive keys.
   _Set = class Set {
-    constructor(props) {
+    set;
+    constructor () {
       this.set = Object.create(null)
     }
     has (key) {
@@ -67,21 +84,13 @@ if (typeof Set !== 'undefined' && isNative(Set)) {
   }
 }
 
-export {
-  hasProto,
-  inBrowser,
-  UA,
-  isIE,
-  isIE9,
-  isEdge,
-  isAndroid,
-  isIOS,
-  isChrome,
-  nativeWatch,
-  supportsPassive,
-  isServerRendering,
-  devtools,
-  isNative,
-  hasSymbol,
-  _Set
+/*
+interface ISet {
+  has(key: string | number): boolean;
+  add(key: string | number): mixed;
+  clear(): void;
 }
+*/
+
+export { _Set }
+// export type { ISet }

@@ -1,25 +1,36 @@
-/*2019-12-21 21:13:22*/
-const emptyObject = Object.freeze({})
+/*override*/
+/* @flow */
 
-function def(obj, key, value, enumerable) {
+export const emptyObject = Object.freeze({})
+
+/**
+ * Check if a string starts with $ or _
+ */
+export function isReserved (str) {
+  const c = (str + '').charCodeAt(0)
+  return c === 0x24 || c === 0x5F
+}
+
+/**
+ * Define a property.
+ */
+export function def (obj, key, val, enumerable) {
   Object.defineProperty(obj, key, {
-    value,
+    value: val,
     enumerable: !!enumerable,
     writable: true,
     configurable: true
   })
 }
 
-function isReserved(str) {
-  /*2019-12-27 21:18:21*/
-  const c = (str + '').charAt(0)
-  return c === 0x24 || c === 0x5F
-}
-
+/**
+ * Parse simple path.
+ */
 const bailRE = /[^\w.$]/
-function parsePath(path) {
-  /*2019-12-27 22:9:47*/
-  if (bailRE.test(path)) return console.error(`parsePath: path ${path} invalid!`)
+export function parsePath (path) {
+  if (bailRE.test(path)) {
+    return
+  }
   const segments = path.split('.')
   return function (obj) {
     for (let i = 0; i < segments.length; i++) {
@@ -28,11 +39,4 @@ function parsePath(path) {
     }
     return obj
   }
-}
-
-export {
-  def,
-  emptyObject,
-  isReserved,
-  parsePath
 }
