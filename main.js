@@ -1,4 +1,4 @@
-import Vue from './src/platforms/web/entry-runtime-with-complier.js'
+import Vue from './src/platforms/web/entry-runtime-with-compiler.js'
 
 const GlobalComp = Vue.component('GlobalComp', {
   props: {
