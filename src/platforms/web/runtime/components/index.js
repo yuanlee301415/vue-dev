@@ -1,3 +1,4 @@
+/*override*/
 import Transition from './transition.js'
 import TransitionGroup from './transition-group.js'
 

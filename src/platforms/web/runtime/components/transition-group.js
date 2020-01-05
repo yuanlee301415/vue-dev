@@ -1,7 +1,20 @@
-/*2020-1-1 15:49:22*/
-import { extend } from "../../../../shared/util.js"
-import { addClass, removeClass } from "../class-util.js"
-import { transitionProps, extractTransitionData } from "./transition.js"
+/*override*/
+/* @flow */
+
+// Provides transition support for list items.
+// supports move transitions using the FLIP technique.
+
+// Because the vdom's children update algorithm is "unstable" - i.e.
+// it doesn't guarantee the relative positioning of removed elements,
+// we force transition-group to update its children into two passes:
+// in the first pass, we remove all nodes that need to be removed,
+// triggering their leaving transition; in the second pass, we insert/move
+// into the final desired state. This way in the second pass removed
+// nodes will remain where they should be.
+
+import { warn, extend } from '../../../../core/util/index.js'
+import { addClass, removeClass } from '../class-util.js'
+import { transitionProps, extractTransitionData } from './transition.js'
 
 import {
   hasTransition,
@@ -9,7 +22,7 @@ import {
   transitionEndEvent,
   addTransitionClass,
   removeTransitionClass
-} from "../transtion-util.js"
+} from '../transition-util.js'
 
 const props = extend({
   tag: String,
@@ -18,31 +31,6 @@ const props = extend({
 
 delete props.mode
 
-function callPendingCbs (c) {
-  if (c.elm._moveCb) {
-    c.elm._moveCb()
-  }
-  if (c.elm._enterCb) {
-    c.elm._enterCb()
-  }
-}
-
-function recordPosition (c) {
-  c.data.newPos = c.elm.getBoundingClientRect()
-}
-
-function applyTranslation (c) {
-  const oldPos = c.data.pos
-  const newPos = c.data.newPos
-  const dx = oldPos.left - newPos.left
-  const dy = oldPos.top - newPos.top
-  if (dx || dy) {
-    c.data.moved = true
-    const s = c.elm.style
-    s.transform = s.WebkitTransform = `translate(${dx}px,${dy}px)`
-    s.transitionDuration = '0s'
-  }
-}
 export default {
   props,
 
@@ -61,10 +49,10 @@ export default {
           children.push(c)
           map[c.key] = c
           ;(c.data || (c.data = {})).transition = transitionData
-        } else {
+        } else if (process.env.NODE_ENV !== 'production') {
           const opts = c.componentOptions
           const name = opts ? (opts.Ctor.options.name || opts.tag || '') : c.tag
-          console.warn(("<transition-group> children must be keyed: <" + name + ">"))
+          warn(`<transition-group> children must be keyed: <${name}>`)
         }
       }
     }
@@ -103,7 +91,9 @@ export default {
   updated () {
     const children = this.prevChildren
     const moveClass = this.moveClass || ((this.name || 'v') + '-move')
-    if (!children.length || !this.hasMove(children[0].elm, moveClass)) return
+    if (!children.length || !this.hasMove(children[0].elm, moveClass)) {
+      return
+    }
 
     // we divide the work into three loops to avoid mixing DOM reads and writes
     // in each iteration - which helps prevent layout thrashing.
@@ -116,10 +106,10 @@ export default {
     // $flow-disable-line
     this._reflow = document.body.offsetHeight
 
-    children.forEach(function (c) {
+    children.forEach((c) => {
       if (c.data.moved) {
-        const el = c.elm
-        const s = el.style
+        var el = c.elm
+        var s = el.style
         addTransitionClass(el, moveClass)
         s.transform = s.WebkitTransform = s.transitionDuration = ''
         el.addEventListener(transitionEndEvent, el._moveCb = function cb (e) {
@@ -150,7 +140,7 @@ export default {
       // is applied.
       const clone = el.cloneNode()
       if (el._transitionClasses) {
-        el._transitionClasses.forEach(cls => removeClass(clone, cls))
+        el._transitionClasses.forEach((cls) => { removeClass(clone, cls) })
       }
       addClass(clone, moveClass)
       clone.style.display = 'none'
@@ -159,5 +149,33 @@ export default {
       this.$el.removeChild(clone)
       return (this._hasMove = info.hasTransform)
     }
+  }
+}
+
+function callPendingCbs (c) {
+  /* istanbul ignore if */
+  if (c.elm._moveCb) {
+    c.elm._moveCb()
+  }
+  /* istanbul ignore if */
+  if (c.elm._enterCb) {
+    c.elm._enterCb()
+  }
+}
+
+function recordPosition (c) {
+  c.data.newPos = c.elm.getBoundingClientRect()
+}
+
+function applyTranslation (c) {
+  const oldPos = c.data.pos
+  const newPos = c.data.newPos
+  const dx = oldPos.left - newPos.left
+  const dy = oldPos.top - newPos.top
+  if (dx || dy) {
+    c.data.moved = true
+    const s = c.elm.style
+    s.transform = s.WebkitTransform = `translate(${dx}px,${dy}px)`
+    s.transitionDuration = '0s'
   }
 }

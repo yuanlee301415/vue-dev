@@ -17,7 +17,7 @@ import {
   whenTransitionEnds,
   addTransitionClass,
   removeTransitionClass
-} from "../transtion-util.js"
+} from "../transition-util.js"
 
 function enter (vnode, toggleDisplay) {
   const el = vnode.elm
