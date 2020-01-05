@@ -1,9 +1,10 @@
-/*2019-12-26 20:26:2*/
+/*override*/
+/* @flow */
 
-import VNode from "./vnode.js"
-import { createElement } from "./create-element.js"
-import { resolveInject } from "../instance/inject.js"
-import { resolveSlots } from "../instance/render-helpers/resolve-slots.js"
+import VNode from './vnode.js'
+import { createElement } from './create-element.js'
+import { resolveInject } from '../instance/inject.js'
+import { resolveSlots } from '../instance/render-helpers/resolve-slots.js'
 import { installRenderHelpers } from '../instance/render-helpers/index.js'
 
 import {
@@ -12,10 +13,15 @@ import {
   camelize,
   emptyObject,
   validateProp
-} from "../util/index.js"
+} from '../util/index.js'
 
-function FunctionalRenderContext(data, props, children, parent, Ctor) {
-  /*2019-12-26 20:19:57*/
+function FunctionalRenderContext (
+  data,
+  props,
+  children,
+  parent,
+  Ctor
+) {
   const options = Ctor.options
   this.data = data
   this.props = props
@@ -25,12 +31,17 @@ function FunctionalRenderContext(data, props, children, parent, Ctor) {
   this.injections = resolveInject(options.inject, parent)
   this.slots = () => resolveSlots(children, parent)
 
+  // ensure the createElement function in functional components
+  // gets a unique context - this is necessary for correct named slot check
   const contextVm = Object.create(parent)
   const isCompiled = isTrue(options._compiled)
   const needNormalization = !isCompiled
 
+  // support for compiled functional template
   if (isCompiled) {
+    // exposing $options for renderStatic()
     this.$options = options
+    // pre-resolve slots for renderSlot()
     this.$slots = this.slots()
     this.$scopedSlots = data.scopedSlots || emptyObject
   }
@@ -51,8 +62,13 @@ function FunctionalRenderContext(data, props, children, parent, Ctor) {
 
 installRenderHelpers(FunctionalRenderContext.prototype)
 
-function createFunctionalComponent(Ctor, propsData, data, contextVm, children) {
-  /*2019-12-26 20:21:21*/
+export function createFunctionalComponent (
+  Ctor,
+  propsData,
+  data,
+  contextVm,
+  children
+) {
   const options = Ctor.options
   const props = {}
   const propOptions = options.props
@@ -61,12 +77,20 @@ function createFunctionalComponent(Ctor, propsData, data, contextVm, children) {
       props[key] = validateProp(key, propOptions, propsData || emptyObject)
     }
   } else {
-    isDef(data.attrs) && mergeProps(props, data.attrs)
-    isDef(data.props) && mergeProps(props, data.props)
+    if (isDef(data.attrs)) mergeProps(props, data.attrs)
+    if (isDef(data.props)) mergeProps(props, data.props)
   }
 
-  const renderContext = new FunctionalRenderContext(data, props, children, contextVm, Ctor)
+  const renderContext = new FunctionalRenderContext(
+    data,
+    props,
+    children,
+    contextVm,
+    Ctor
+  )
+
   const vnode = options.render.call(null, renderContext._c, renderContext)
+
   if (vnode instanceof VNode) {
     vnode.functionalContext = contextVm
     vnode.functionalOptions = options
@@ -74,15 +98,12 @@ function createFunctionalComponent(Ctor, propsData, data, contextVm, children) {
       (vnode.data || (vnode.data = {})).slot = data.slot
     }
   }
+
   return vnode
 }
 
-function mergeProps(to, from) {
+function mergeProps (to, from) {
   for (const key in from) {
     to[camelize(key)] = from[key]
   }
-}
-
-export {
-  createFunctionalComponent
 }

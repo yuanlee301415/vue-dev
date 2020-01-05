@@ -48,7 +48,7 @@ export function validateProp (
     observe(value)
     observerState.shouldConvert = prevShouldConvert
   }
-  if (process.env.NODE_ENV !== 'production') {
+  if ('process.env.NODE_ENV' !== 'production') {
     assertProp(prop, key, value, vm, absent)
   }
   return value

@@ -1,44 +1,60 @@
-class   VNode {
-  /*2019-12-27 21:49:5*/
-  tag
-  data // VNodeDate
-  children //Array<VNode>
-  text
-  elm // Node
-  ns
-  context // Component
-  key
-  componentOptions // VNodeComponentOptions
-  componentInstance // Component
-  parent // VNode
-  raw // contains raw HTML
-  isStatic // static node
-  isRootInsert
-  isComment // empty comment placeholder ?
-  isCloned // is a cloned node
-  asyncFactory // async component function
-  asyncMeta
-  isAsyncPlaceholder
-  ssrContent
-  functionalContext // Component:real context vm for functional nodes
-  functionalOptions // ComponentOptions
-  functionalScoped
+/*override*/
+/* @flow */
 
-  constructor(tag, data, children, text, elm, context, componentOptions, asyncFactory) {
+export default class VNode {
+/*
+  tag: string | void;
+  data: VNodeData | void;
+  children: ?Array<VNode>;
+  text: string | void;
+  elm: Node | void;
+  ns: string | void;
+  context: Component | void; // rendered in this component's scope
+  key: string | number | void;
+  componentOptions: VNodeComponentOptions | void;
+  componentInstance: Component | void; // component instance
+  parent: VNode | void; // component placeholder node
+
+  // strictly internal
+  raw: boolean; // contains raw HTML? (server only)
+  isStatic: boolean; // hoisted static node
+  isRootInsert: boolean; // necessary for enter transition check
+  isComment: boolean; // empty comment placeholder?
+  isCloned: boolean; // is a cloned node?
+  isOnce: boolean; // is a v-once node?
+  asyncFactory: Function | void; // async component factory function
+  asyncMeta: Object | void;
+  isAsyncPlaceholder: boolean;
+  ssrContext: Object | void;
+  functionalContext: Component | void; // real context vm for functional nodes
+  functionalOptions: ?ComponentOptions; // for SSR caching
+  functionalScopeId: ?string; // functioanl scope id support
+*/
+
+  constructor (
+    tag,
+    data,
+    children,
+    text,
+    elm,
+    context,
+    componentOptions,
+    asyncFactory
+  ) {
     this.tag = tag
     this.data = data
     this.children = children
     this.text = text
     this.elm = elm
-    this.ns = void 0
+    this.ns = undefined
     this.context = context
-    this.functionalContext = void 0
-    this.functionalOptions = void 0
-    this.functionalScopeId = void 0
+    this.functionalContext = undefined
+    this.functionalOptions = undefined
+    this.functionalScopeId = undefined
     this.key = data && data.key
     this.componentOptions = componentOptions
-    this.componentInstance = void 0
-    this.parent = void 0
+    this.componentInstance = undefined
+    this.parent = undefined
     this.raw = false
     this.isStatic = false
     this.isRootInsert = true
@@ -46,34 +62,40 @@ class   VNode {
     this.isCloned = false
     this.isOnce = false
     this.asyncFactory = asyncFactory
-    this.asyncMeta = void 0
+    this.asyncMeta = undefined
     this.isAsyncPlaceholder = false
   }
-}
-VNode.prototype.child = {
-  get () {
+
+  // DEPRECATED: alias for componentInstance for backwards compat.
+  /* istanbul ignore next */
+  get child () {
     return this.componentInstance
   }
 }
 
-function createEmptyVNode(text) {
-  const vnode = new VNode()
-  vnode.text = text
-  vnode.isComment = true
-  return vnode
+export const createEmptyVNode = (text) => {
+  const node = new VNode()
+  node.text = text
+  node.isComment = true
+  return node
 }
 
-function createTextVNode(text) {
-  return new VNode(void 0, void 0, void 0, text)
+export function createTextVNode (val) {
+  return new VNode(undefined, undefined, undefined, String(val))
 }
 
-function cloneVNode(vnode, deep) {
+// optimized shallow clone
+// used for static nodes and slot nodes because they may be reused across
+// multiple renders, cloning them avoids errors when DOM manipulations rely
+// on their elm reference.
+export function cloneVNode (vnode, deep) {
   const cloned = new VNode(
     vnode.tag,
     vnode.data,
     vnode.children,
     vnode.text,
     vnode.elm,
+    vnode.context,
     vnode.componentOptions,
     vnode.asyncFactory
   )
@@ -81,24 +103,18 @@ function cloneVNode(vnode, deep) {
   cloned.isStatic = vnode.isStatic
   cloned.key = vnode.key
   cloned.isComment = vnode.isComment
+  cloned.isCloned = true
   if (deep && vnode.children) {
-    vnode.children = cloneVNodes(vnode.children, deep)
+    cloned.children = cloneVNodes(vnode.children)
   }
+  return cloned
 }
 
-function cloneVNodes(vnodes, deep) {
-  const l = vnodes.length
-  const res = new Array(l)
-  for (let i = 0; i < l; i++) {
+export function cloneVNodes (vnodes, deep) {
+  const len = vnodes.length
+  const res = new Array(len)
+  for (let i = 0; i < len; i++) {
     res[i] = cloneVNode(vnodes[i], deep)
   }
   return res
-}
-
-export default VNode
-export {
-  createEmptyVNode,
-  createTextVNode,
-  cloneVNode,
-  cloneVNodes
 }
