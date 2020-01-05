@@ -1,7 +1,20 @@
-import config from '../../config.js'
-import { hyphenate } from '../../util/index.js'
+/*override*/
+/* @flow */
 
-function checkKeyCodes(eventKeyCode, key, builtInAlias, eventKeyName) {
+import config from '../../../core/config.js'
+import { hyphenate } from '../../../shared/util.js'
+
+/**
+ * Runtime helper for checking keyCodes from config.
+ * exposed as Vue.prototype._k
+ * passing in eventKeyName as last argument separately for backwards compat
+ */
+export function checkKeyCodes (
+  eventKeyCode,
+  key,
+  builtInAlias,
+  eventKeyName
+) {
   const keyCodes = config.keyCodes[key] || builtInAlias
   if (keyCodes) {
     if (Array.isArray(keyCodes)) {
@@ -12,8 +25,4 @@ function checkKeyCodes(eventKeyCode, key, builtInAlias, eventKeyName) {
   } else if (eventKeyName) {
     return hyphenate(eventKeyName) !== key
   }
-}
-
-export {
-  checkKeyCodes
 }
