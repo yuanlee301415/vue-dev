@@ -1,15 +1,30 @@
-function resolveSlots(children, context) {
-  /*2019-12-26 22:3:29*/
+/*override*/
+/* @flow */
+
+/**
+ * Runtime helper for resolving raw children VNodes into a slot object.
+ */
+export function resolveSlots (
+  children,
+  context
+) {
   const slots = {}
-  if (!children) return slots
-  const defaultSlots = []
+  if (!children) {
+    return slots
+  }
+  const defaultSlot = []
   for (let i = 0, l = children.length; i < l; i++) {
     const child = children[i]
     const data = child.data
+    // remove slot attribute if the node is resolved as a Vue slot node
     if (data && data.attrs && data.attrs.slot) {
       delete data.attrs.slot
     }
-    if ((child.context === context || child.functionalContext) &&  data && data.slot !== null) {
+    // named slots should only be respected if the vnode was rendered in the
+    // same context.
+    if ((child.context === context || child.functionalContext === context) &&
+      data && data.slot != null
+    ) {
       const name = child.data.slot
       const slot = (slots[name] || (slots[name] = []))
       if (child.tag === 'template') {
@@ -18,17 +33,25 @@ function resolveSlots(children, context) {
         slot.push(child)
       }
     } else {
-      defaultSlots.push()
+      defaultSlot.push(child)
     }
   }
-  if (!defaultSlots.every(isWhitespace)) {
-    slots.default = defaultSlots
+  // ignore whitespace
+  if (!defaultSlot.every(isWhitespace)) {
+    slots.default = defaultSlot
   }
   return slots
 }
 
-function resolveScopedSlots(fns, res = {}) {
-  /*2019-12-27 19:54:11*/
+function isWhitespace (node) {
+  return node.isComment || node.text === ' '
+}
+
+export function resolveScopedSlots (
+  fns, // see flow/vnode
+  res
+) {
+  res = res || {}
   for (let i = 0; i < fns.length; i++) {
     if (Array.isArray(fns[i])) {
       resolveScopedSlots(fns[i], res)
@@ -36,13 +59,5 @@ function resolveScopedSlots(fns, res = {}) {
       res[fns[i].key] = fns[i].fn
     }
   }
-}
-
-function isWhitespace(node) {
-  return node.isComment || node.text === ' '
-}
-
-export {
-  resolveScopedSlots,
-  resolveSlots
+  return res
 }
