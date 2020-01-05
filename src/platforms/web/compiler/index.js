@@ -1,10 +1,9 @@
-/*2020-1-4 18:31:11*/
+/*override*/
+/* @flow */
+
 import { baseOptions } from './options.js'
 import { createCompiler } from '../../../compiler/index.js'
 
 const { compile, compileToFunctions } = createCompiler(baseOptions)
 
-export {
-  compile,
-  compileToFunctions
-}
+export { compile, compileToFunctions }
