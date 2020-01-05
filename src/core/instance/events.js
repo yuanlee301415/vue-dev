@@ -1,129 +1,142 @@
-/*2019-12-23 22:33:33*/
-import { updateListeners } from "../vdom/helpers/index.js"
-import { formatComponentName, hyphenate } from "../util/index.js"
+/*override*/
+/* @flow */
 
-function eventsMixin(Vue) {
-  console.info('>>eventsMixin')
+import {
+  tip,
+  toArray,
+  hyphenate,
+  handleError,
+  formatComponentName
+} from '../util/index.js'
+import { updateListeners } from '../vdom/helpers/index.js'
 
-  const hookRE = /^hook:/
-
-  // $on
-  Vue.prototype.$on = function (event, fn) {
-    if (Array.isArray(event)) {
-      event.forEach(evt => this.$on(evt, fn))
-    } else {
-      if (!this._events[event]) this._events[event] = []
-      this._events.push(event, fn)
-      if (hookRE.test(event)) {
-        this._hasHookEvent = true
-      }
-    }
-    return this
-  }
-  console.log('Vue.prototype.$on')
-
-  // $once
-  Vue.prototype.$once = function (event, fn) {
-    const vm = this
-    function on() {
-      this.$off(event, on)
-      fn.apply(vm, arguments)
-    }
-    on.fn = fn
-    this.$on(event, on)
-    return this
-  }
-  console.log('Vue.prototype.$once')
-
-  // $off
-  Vue.prototype.$off = function (event, fn) {
-    if (!arguments.length) {
-      this._events = Object.create(null)
-      return this
-    }
-
-    if (Array.isArray(event)) {
-      event.forEach(evt => this.$off(evt, fn))
-      return this
-    }
-
-    if (arguments.length === 1) {
-      this._events[event] = null
-      return this
-    }
-
-    const cbs = this._events[event]
-    if (!cbs) return this
-
-    if (fn) {
-      let cb
-      let l = cbs.length
-      while (l--) {
-        cb = cbs[l]
-        if (cb === fn || cb === fn.fn) {
-          cbs.splice(l, 1)
-          break
-        }
-      }
-    }
-    return this
-  }
-  console.log('Vue.prototype.$off')
-
-  // $emit
-  Vue.prototype.$emit = function (event) {
-    const vm = this
-    const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && vm._events[lowerCaseEvent]) {
-      console.warn(
-        `Event "${lowerCaseEvent}" is emitted in component ` +
-        `${formatComponentName(vm)} but the handler is registered for "${event}". ` +
-        `Note that HTML attributes are case-insensitive and you cannot use ` +
-        `v-on to listen to camelCase events when using in-DOM templates. ` +
-        `You should probably use "${hyphenate(event)}" instead of "${event}".`
-      )
-    }
-    let cbs = this._events[event]
-    if (cbs) {
-      const args = Array.from(arguments).slice(1)
-      cbs = cbs.length > 1 ? Array.from(cbs) : cbs
-      for (let i = 0, l = cbs.length; i < l; i++) {
-        try {
-          cbs[i].apply(vm, args)
-        } catch (e) {
-          console.error(e, vm, `event handler for "${event}"`)
-        }
-      }
-    }
-    return this
-  }
-  console.log('Vue.prototype.$emit')
-}
-
-function initEvents(vm) {
-  console.log('>>initEvents')
+export function initEvents (vm) {
   vm._events = Object.create(null)
   vm._hasHookEvent = false
+  // init parent attached events
   const listeners = vm.$options._parentListeners
-  listeners && updateComponentListeners(vm, listeners)
+  if (listeners) {
+    updateComponentListeners(vm, listeners)
+  }
 }
 
 let target
-function updateComponentListeners(vm, listeners, oldListeners) {
+
+function add (event, fn, once) {
+  if (once) {
+    target.$once(event, fn)
+  } else {
+    target.$on(event, fn)
+  }
+}
+
+function remove (event, fn) {
+  target.$off(event, fn)
+}
+
+export function updateComponentListeners (
+  vm,
+  listeners,
+  oldListeners
+) {
   target = vm
   updateListeners(listeners, oldListeners || {}, add, remove, vm)
 }
 
-function add(event, fn, once) {
-  once ? target.$once(event, fn) : target.$on(event, fn)
-}
+export function eventsMixin (Vue) {
+  const hookRE = /^hook:/
+  Vue.prototype.$on = function (event, fn) {
+    const vm = this
+    if (Array.isArray(event)) {
+      for (let i = 0, l = event.length; i < l; i++) {
+        this.$on(event[i], fn)
+      }
+    } else {
+      (vm._events[event] || (vm._events[event] = [])).push(fn)
+      // optimize hook:event cost by using a boolean flag marked at registration
+      // instead of a hash lookup
+      if (hookRE.test(event)) {
+        vm._hasHookEvent = true
+      }
+    }
+    return vm
+  }
 
-function remove(event, fn) {
-  target.$off(event, fn)
-}
+  Vue.prototype.$once = function (event, fn) {
+    const vm = this
+    function on () {
+      vm.$off(event, on)
+      fn.apply(vm, arguments)
+    }
+    on.fn = fn
+    vm.$on(event, on)
+    return vm
+  }
 
-export {
-  eventsMixin,
-  initEvents,
-  updateComponentListeners
+  Vue.prototype.$off = function (event, fn) {
+    const vm = this
+    // all
+    if (!arguments.length) {
+      vm._events = Object.create(null)
+      return vm
+    }
+    // array of events
+    if (Array.isArray(event)) {
+      for (let i = 0, l = event.length; i < l; i++) {
+        this.$off(event[i], fn)
+      }
+      return vm
+    }
+    // specific event
+    const cbs = vm._events[event]
+    if (!cbs) {
+      return vm
+    }
+    if (arguments.length === 1) {
+      vm._events[event] = null
+      return vm
+    }
+    if (fn) {
+      // specific handler
+      let cb
+      let i = cbs.length
+      while (i--) {
+        cb = cbs[i]
+        if (cb === fn || cb.fn === fn) {
+          cbs.splice(i, 1)
+          break
+        }
+      }
+    }
+    return vm
+  }
+
+  Vue.prototype.$emit = function (event) {
+    const vm = this
+    if ('process.env.NODE_ENV' !== 'production') {
+      const lowerCaseEvent = event.toLowerCase()
+      if (lowerCaseEvent !== event && vm._events[lowerCaseEvent]) {
+        tip(
+          `Event "${lowerCaseEvent}" is emitted in component ` +
+          `${formatComponentName(vm)} but the handler is registered for "${event}". ` +
+          `Note that HTML attributes are case-insensitive and you cannot use ` +
+          `v-on to listen to camelCase events when using in-DOM templates. ` +
+          `You should probably use "${hyphenate(event)}" instead of "${event}".`
+        )
+      }
+    }
+    let cbs = vm._events[event]
+    if (cbs) {
+      cbs = cbs.length > 1 ? toArray(cbs) : cbs
+      const args = toArray(arguments, 1)
+      for (let i = 0, l = cbs.length; i < l; i++) {
+        try {
+          cbs[i].apply(vm, args)
+        } catch (e) {
+          handleError(e, vm, `event handler for "${event}"`)
+        }
+      }
+    }
+    return vm
+  }
 }
