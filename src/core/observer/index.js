@@ -4,7 +4,7 @@ import { arrayMethods } from "./array.js"
 import { def, isObject, hasOwn, hasProto, isPlainObject, isValidArrayIndex, isServerRendering } from "../util/index.js"
 
 const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
-const observeState = {
+const observerState = {
   shouldConvert: true
 }
 
@@ -58,7 +58,7 @@ function observe(value, asRootData) {
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
   } else if (
-    observeState.shouldConvert &&
+    observerState.shouldConvert &&
     !isServerRendering() &&
     Array.isArray(value) || isPlainObject(value) &&
     Object.isExtensible(value) &&
@@ -160,5 +160,5 @@ export {
   defineReactive,
   set,
   del,
-  observeState
+  observerState
 }

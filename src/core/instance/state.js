@@ -7,7 +7,7 @@ import {
   set,
   del,
   observe,
-  observeState,
+  observerState,
   defineReactive
 } from '../observer/index.js'
 
@@ -123,7 +123,7 @@ function initProps(vm, propsOptions) {
   const props = vm._props || {}
   const keys = vm.$options._propKeys
   const isRoot = !vm.$parent
-  observeState.shouldConvert = isRoot
+  observerState.shouldConvert = isRoot
   for (const key in propsOptions) {
     keys.push(key)
     const value = validateProp(key, propsOptions, propsData, vm)
@@ -147,7 +147,7 @@ function initProps(vm, propsOptions) {
       !(key in vm) && proxy(vm, '_props_', key)
     }
   }
-  observeState.shouldConvert = true
+  observerState.shouldConvert = true
 }
 
 function initData(vm) {

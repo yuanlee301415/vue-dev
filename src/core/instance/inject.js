@@ -1,5 +1,5 @@
 import { hasSymbol, defineReactive } from "../util/index.js"
-import { observeState } from "../observer/index.js"
+import { observerState } from "../observer/index.js"
 
 function initProvide(vm) {
   const provide = vm.$options.provide
@@ -11,11 +11,11 @@ function initProvide(vm) {
 function initInjections(vm) {
   const ret = resolveInject(vm.$options.inject, vm)
   if (ret) {
-    observeState.shouldConvert = false
+    observerState.shouldConvert = false
     Object.keys(ret).forEach(key => {
       defineReactive(vm, key, ret[key])
     })
-    observeState.shouldConvert = true
+    observerState.shouldConvert = true
   }
 }
 

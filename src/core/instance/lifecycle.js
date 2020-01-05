@@ -3,7 +3,7 @@ import config from "../config.js"
 import Watcher from "../observer/Watcher.js"
 import { mark, measure } from '../util/perf.js'
 import { createEmptyVNode } from "../vdom/vnode.js"
-import { observeState } from "../observer/index.js"
+import { observerState } from "../observer/index.js"
 import { updateComponentListeners } from "./events.js"
 import { resolveSlots } from "./render-helpers/resolve-slots.js"
 import { noop, remove, emptyObject, validateProp } from "../util/index.js"
@@ -199,14 +199,14 @@ function updateChildComponent(vm, propsData, listeners, parentVnode, renderChild
   vm.$listeners = listeners || emptyObject
 
   if (propsData && vm.$options.props) {
-    observeState.shouldConvert = false
+    observerState.shouldConvert = false
     const props = vm._props
     const propKeys = vm.$options._propKeys || []
     for (let i = 0; i < propKeys.length; i++) {
       const key = propKeys[i]
       props[key] = validateProp(key, vm.$options.props, propsData, vm)
     }
-    observeState.shouldConvert = true
+    observerState.shouldConvert = true
     vm.$options.propsData = propsData
   }
 

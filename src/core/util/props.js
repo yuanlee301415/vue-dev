@@ -1,5 +1,5 @@
 /*2019-12-21 22:11:9*/
-import { observe, observeState } from "../observer/index.js"
+import { observe, observerState } from "../observer/index.js"
 
 import {
   hasOwn,
@@ -26,10 +26,10 @@ function validateProp(key, propOptions, propsData, vm) {
 
   if (value === void 0) {
     value = getPropDefaultValue(vm, prop, key)
-    const prevShouldConvert = observeState.shouldConvert
-    observeState.shouldConvert = true
+    const prevShouldConvert = observerState.shouldConvert
+    observerState.shouldConvert = true
     observe(value)
-    observeState.shouldConvert = prevShouldConvert
+    observerState.shouldConvert = prevShouldConvert
   }
   return value
 }
