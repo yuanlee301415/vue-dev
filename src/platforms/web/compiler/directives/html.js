@@ -1,10 +1,10 @@
-/*2020-1-3 22:31:24*/
-import { addProp } from "../../../../compiler/helpers.js"
+/*override*/
+/* @flow */
 
-function html(el, dir) {
+import { addProp } from '../../../../compiler/helpers.js'
+
+export default function html (el, dir) {
   if (dir.value) {
     addProp(el, 'innerHTML', `_s(${dir.value})`)
   }
 }
-
-export default html
