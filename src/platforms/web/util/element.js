@@ -1,12 +1,15 @@
-/*2019-12-29 16:35:53*/
-import { inBrowser, makeMap } from "../../../core/util/index.js"
+/*override*/
+/* @flow */
 
-const namespaceMap = {
+import { inBrowser } from '../../../core/util/env.js'
+import { makeMap } from '../../../shared/util.js'
+
+export const namespaceMap = {
   svg: 'http://www.w3.org/2000/svg',
   math: 'http://www.w3.org/1998/Math/MathML'
 }
 
-const isHTMLTag = makeMap(
+export const isHTMLTag = makeMap(
   'html,body,base,head,link,meta,style,title,' +
   'address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,' +
   'div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,' +
@@ -20,48 +23,56 @@ const isHTMLTag = makeMap(
   'content,element,shadow,template,blockquote,iframe,tfoot'
 )
 
-const isSVG = makeMap(
+// this map is intentionally selective, only covering SVG elements that may
+// contain child elements.
+export const isSVG = makeMap(
   'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font-face,' +
   'foreignObject,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
   'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view',
   true
 )
 
-const isPreTag = tag => tag === 'pre'
-const isReservedTag = tag => isHTMLTag(tag) || isSVG(tag)
+export const isPreTag = (tag) => tag === 'pre'
 
-function getTagNamespace(tag) {
-  return isSVG(tag) ? 'svg' : tag === 'math' ? 'math' : void 0
+export const isReservedTag = (tag) => {
+  return isHTMLTag(tag) || isSVG(tag)
+}
+
+export function getTagNamespace (tag) {
+  if (isSVG(tag)) {
+    return 'svg'
+  }
+  // basic support for MathML
+  // note it doesn't support other MathML elements being component roots
+  if (tag === 'math') {
+    return 'math'
+  }
 }
 
 const unknownElementCache = Object.create(null)
-
-function isUnknownElement(tag) {
-  if (!inBrowser) return true
-  if (isReservedTag(tag)) return false
+export function isUnknownElement (tag) {
+  /* istanbul ignore if */
+  if (!inBrowser) {
+    return true
+  }
+  if (isReservedTag(tag)) {
+    return false
+  }
   tag = tag.toLowerCase()
+  /* istanbul ignore if */
   if (unknownElementCache[tag] != null) {
     return unknownElementCache[tag]
   }
   const el = document.createElement(tag)
   if (tag.indexOf('-') > -1) {
+    // http://stackoverflow.com/a/28210364/1070244
     return (unknownElementCache[tag] = (
-      el.constructor === window.HTMLUnknownElement || el.constructor === window.HTMLElement
+      el.constructor === window.HTMLUnknownElement ||
+      el.constructor === window.HTMLElement
     ))
   } else {
     return (unknownElementCache[tag] = /HTMLUnknownElement/.test(el.toString()))
   }
 }
 
-const isTextInputType = makeMap('text,number,password,search,email,tel,url')
-
-export {
-  namespaceMap,
-  isHTMLTag,
-  isSVG,
-  isPreTag,
-  isReservedTag,
-  getTagNamespace,
-  isUnknownElement,
-  isTextInputType
-}
+export const isTextInputType = makeMap('text,number,password,search,email,tel,url')

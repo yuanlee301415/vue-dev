@@ -1,38 +1,50 @@
-/*2019-12-31 23:28:13*/
-import { cached, extend, toObject } from "../../../core/util/index.js"
+/*override*/
+/* @flow */
 
-const parseStyleText = cached(function (cssText) {
+import { cached, extend, toObject } from '../../../shared/util.js'
+
+export const parseStyleText = cached(function (cssText) {
   const res = {}
   const listDelimiter = /;(?![^(]*\))/g
   const propertyDelimiter = /:(.+)/
-  cssText.split(listDelimiter).forEach(item => {
+  cssText.split(listDelimiter).forEach(function (item) {
     if (item) {
-      const tmp = item.split(propertyDelimiter)
+      var tmp = item.split(propertyDelimiter)
       tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())
     }
   })
   return res
 })
 
-function normalizeStyleData(data) {
+// merge static and dynamic style data on the same vnode
+function normalizeStyleData (data) {
   const style = normalizeStyleBinding(data.style)
-  return data.staticStyle ? extend(data.staticStyle, style) : style
+  // static style is pre-processed into an object during compilation
+  // and is always a fresh object, so it's safe to merge into it
+  return data.staticStyle
+    ? extend(data.staticStyle, style)
+    : style
 }
 
-function normalizeStyleBinding(bindingStyle) {
+// normalize possible array / string values into Object
+export function normalizeStyleBinding (bindingStyle) {
   if (Array.isArray(bindingStyle)) {
     return toObject(bindingStyle)
   }
-
   if (typeof bindingStyle === 'string') {
     return parseStyleText(bindingStyle)
   }
   return bindingStyle
 }
 
-function getStyle(vnode, checkChild) {
+/**
+ * parent component style should be after child's
+ * so that parent component's style could override it
+ */
+export function getStyle (vnode, checkChild) {
   const res = {}
   let styleData
+
   if (checkChild) {
     let childNode = vnode
     while (childNode.componentInstance) {
@@ -56,8 +68,3 @@ function getStyle(vnode, checkChild) {
   return res
 }
 
-export {
-  parseStyleText,
-  normalizeStyleBinding,
-  getStyle
-}

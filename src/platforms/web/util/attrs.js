@@ -1,20 +1,26 @@
-/*2019-12-29 15:59:8*/
-import { makeMap } from "../../../shared/util.js"
+/*override*/
+/* @flow */
 
-const isReservedAttr = makeMap('style,class')
+import { makeMap } from '../../../shared/util.js'
+
+// these are reserved for web because they are directly compiled away
+// during template compilation
+export const isReservedAttr = makeMap('style,class')
+
+// attributes that should be using props for binding
 const acceptValue = makeMap('input,textarea,option,select,progress')
-const mustUseProp = (tag, type, attr) => {
+export const mustUseProp = (tag, type, attr) => {
   return (
-    (attr === 'value' && acceptValue(tag) && type !== 'button') ||
+    (attr === 'value' && acceptValue(tag)) && type !== 'button' ||
     (attr === 'selected' && tag === 'option') ||
     (attr === 'checked' && tag === 'input') ||
     (attr === 'muted' && tag === 'video')
   )
 }
 
-const isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck')
+export const isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck')
 
-const isBooleanAttr = makeMap(
+export const isBooleanAttr = makeMap(
   'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,' +
   'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
   'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,' +
@@ -23,27 +29,16 @@ const isBooleanAttr = makeMap(
   'truespeed,typemustmatch,visible'
 )
 
-const xlinkNS = 'http://www.w3.org/1999/xlink'
+export const xlinkNS = 'http://www.w3.org/1999/xlink'
 
-const isXlink =name => {
+export const isXlink = (name) => {
   return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
 }
 
-const getXlinkProp = name => {
+export const getXlinkProp = (name) => {
   return isXlink(name) ? name.slice(6, name.length) : ''
 }
 
-const isFalsyAttrValue = val => {
+export const isFalsyAttrValue = (val) => {
   return val == null || val === false
-}
-
-export {
-  isReservedAttr,
-  mustUseProp,
-  isEnumeratedAttr,
-  isBooleanAttr,
-  xlinkNS,
-  isXlink,
-  getXlinkProp,
-  isFalsyAttrValue
 }
