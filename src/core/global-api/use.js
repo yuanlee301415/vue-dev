@@ -1,14 +1,16 @@
-/*2019-12-22 20:50:29*/
+/*override*/
+/* @flow */
+
 import { toArray } from '../util/index.js'
 
-function initUse(Vue) {
-  console.log('Vue.use')
+export function initUse (Vue) {
   Vue.use = function (plugin) {
     const installedPlugins = (this._installedPlugins || (this._installedPlugins = []))
-    if (installedPlugins.includes(plugin)) {
+    if (installedPlugins.indexOf(plugin) > -1) {
       return this
     }
 
+    // additional parameters
     const args = toArray(arguments, 1)
     args.unshift(this)
     if (typeof plugin.install === 'function') {
@@ -17,10 +19,6 @@ function initUse(Vue) {
       plugin.apply(null, args)
     }
     installedPlugins.push(plugin)
-    return  this
+    return this
   }
-}
-
-export {
-  initUse
 }
