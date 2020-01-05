@@ -23,7 +23,7 @@ const isBooleanAttr = makeMap(
   'truespeed,typemustmatch,visible'
 )
 
-const xlinksNS = 'http://www.w3.org/1999/xlink'
+const xlinkNS = 'http://www.w3.org/1999/xlink'
 
 const isXlink =name => {
   return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
@@ -42,7 +42,7 @@ export {
   mustUseProp,
   isEnumeratedAttr,
   isBooleanAttr,
-  xlinksNS,
+  xlinkNS,
   isXlink,
   getXlinkProp,
   isFalsyAttrValue

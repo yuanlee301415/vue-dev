@@ -1,36 +1,42 @@
-/*2019-12-31 20:39:10*/
+/*override*/
+/* @flow */
+
 import {
   isDef,
-  isUnDef
-} from "../../../../core/util/index.js"
+  isUndef
+} from '../../../../shared/util.js'
 
 import {
   concat,
   stringifyClass,
   genClassForVnode
-} from "../../util/index.js"
+} from '../../../web/util/index.js'
 
-function updateClass(oldVnode, vnode) {
+function updateClass (oldVnode, vnode) {
   const el = vnode.elm
   const data = vnode.data
   const oldData = oldVnode.data
   if (
-    isUnDef(data.staticClass) &&
-    isUnDef(data.class) && (
-      isUnDef(oldData) || (
-        isUnDef(oldData.staticClass) &&
-          isUnDef(oldData.data)
-        )
+    isUndef(data.staticClass) &&
+    isUndef(data.class) && (
+      isUndef(oldData) || (
+        isUndef(oldData.staticClass) &&
+        isUndef(oldData.class)
+      )
     )
-  ) return
+  ) {
+    return
+  }
 
   let cls = genClassForVnode(vnode)
 
-  const transitionClass = el._trnasitionClasses
+  // handle transition classes
+  const transitionClass = el._transitionClasses
   if (isDef(transitionClass)) {
     cls = concat(cls, stringifyClass(transitionClass))
   }
 
+  // set the class
   if (cls !== el._prevClass) {
     el.setAttribute('class', cls)
     el._prevClass = cls

@@ -1,31 +1,36 @@
-/*2019-12-31 20:29:37*/
+/*override*/
+/* @flow */
+
+import { isIE9, isEdge } from '../../../../core/util/env.js'
+
 import {
-  isIE9,
-  isEdge,
   extend,
   isDef,
-  isUnDef
-} from "../../../../core/util/index.js"
+  isUndef
+} from '../../../../shared/util.js'
 
 import {
   isXlink,
-  xlinksNS,
+  xlinkNS,
   getXlinkProp,
   isBooleanAttr,
   isEnumeratedAttr,
   isFalsyAttrValue
-} from "../../util/index.js"
+} from '../../../web/util/index.js'
 
-function updateAttrs(oldVnode, vnode) {
+function updateAttrs (oldVnode, vnode) {
   const opts = vnode.componentOptions
-  if (isDef(opts) && opts.Ctor.options.inheritAttrs === false) return
-  if (isUnDef(oldVnode.data.attrs) && isUnDef(vnode.data.attrs)) return
-
+  if (isDef(opts) && opts.Ctor.options.inheritAttrs === false) {
+    return
+  }
+  if (isUndef(oldVnode.data.attrs) && isUndef(vnode.data.attrs)) {
+    return
+  }
   let key, cur, old
   const elm = vnode.elm
   const oldAttrs = oldVnode.data.attrs || {}
   let attrs = vnode.data.attrs || {}
-
+  // clone observed objects, as the user probably wants to mutate it
   if (isDef(attrs.__ob__)) {
     attrs = vnode.data.attrs = extend({}, attrs)
   }
@@ -37,15 +42,16 @@ function updateAttrs(oldVnode, vnode) {
       setAttr(elm, key, cur)
     }
   }
-
+  // #4391: in IE9, setting type can reset value for input[type=radio]
+  // #6666: IE/Edge forces progress value down to 1 before setting a max
+  /* istanbul ignore if */
   if ((isIE9 || isEdge) && attrs.value !== oldAttrs.value) {
     setAttr(elm, 'value', attrs.value)
   }
-
   for (key in oldAttrs) {
-    if (isUnDef(attrs[key])) {
+    if (isUndef(attrs[key])) {
       if (isXlink(key)) {
-        elm.removeAttributeNS(xlinksNS, getXlinkProp(key))
+        elm.removeAttributeNS(xlinkNS, getXlinkProp(key))
       } else if (!isEnumeratedAttr(key)) {
         elm.removeAttribute(key)
       }
@@ -53,21 +59,27 @@ function updateAttrs(oldVnode, vnode) {
   }
 }
 
-function setAttr(el, key, value) {
+function setAttr (el, key, value) {
   if (isBooleanAttr(key)) {
+    // set attribute for blank value
+    // e.g. <option disabled>Select one</option>
     if (isFalsyAttrValue(value)) {
       el.removeAttribute(key)
     } else {
-      value = key === 'allowfullscreen' && el.tagName === 'EMBED' ? 'true' : key
+      // technically allowfullscreen is a boolean attribute for <iframe>,
+      // but Flash expects a value of "true" when used on <embed> tag
+      value = key === 'allowfullscreen' && el.tagName === 'EMBED'
+        ? 'true'
+        : key
       el.setAttribute(key, value)
     }
   } else if (isEnumeratedAttr(key)) {
     el.setAttribute(key, isFalsyAttrValue(value) || value === 'false' ? 'false' : 'true')
   } else if (isXlink(key)) {
     if (isFalsyAttrValue(value)) {
-      el.removeAttributeNS(xlinksNS, getXlinkProp(key))
+      el.removeAttributeNS(xlinkNS, getXlinkProp(key))
     } else {
-      el.setAttribute(xlinksNS, key, value)
+      el.setAttributeNS(xlinkNS, key, value)
     }
   } else {
     if (isFalsyAttrValue(value)) {
@@ -76,7 +88,6 @@ function setAttr(el, key, value) {
       el.setAttribute(key, value)
     }
   }
-
 }
 
 export default {
