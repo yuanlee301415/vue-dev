@@ -1,55 +1,75 @@
-import { hasSymbol, defineReactive } from "../util/index.js"
-import { observerState } from "../observer/index.js"
+/*override*/
+/* @flow */
 
-function initProvide(vm) {
+import { warn } from '../util/index.js'
+import { hasSymbol } from '../../core/util/env.js'
+import { defineReactive, observerState } from '../observer/index.js'
+
+export function initProvide (vm) {
   const provide = vm.$options.provide
   if (provide) {
-    vm._provided = typeof provide === 'function' ? provide.call(vm) : provide
+    vm._provided = typeof provide === 'function'
+      ? provide.call(vm)
+      : provide
   }
 }
 
-function initInjections(vm) {
-  const ret = resolveInject(vm.$options.inject, vm)
-  if (ret) {
+export function initInjections (vm) {
+  const result = resolveInject(vm.$options.inject, vm)
+  if (result) {
     observerState.shouldConvert = false
-    Object.keys(ret).forEach(key => {
-      defineReactive(vm, key, ret[key])
+    Object.keys(result).forEach(key => {
+      /* istanbul ignore else */
+      if ('process.env.NODE_ENV' !== 'production') {
+        defineReactive(vm, key, result[key], () => {
+          warn(
+            `Avoid mutating an injected value directly since the changes will be ` +
+            `overwritten whenever the provided component re-renders. ` +
+            `injection being mutated: "${key}"`,
+            vm
+          )
+        })
+      } else {
+        defineReactive(vm, key, result[key])
+      }
     })
     observerState.shouldConvert = true
   }
 }
 
-function resolveInject(inject, vm) {
-  /*2019-12-26 20:15:36*/
-  if (!inject) return
-  const res = Object.create(null)
-  const keys = hasSymbol ? Reflect.ownKeys(inject).filter(key => Object.getOwnPropertyDescriptor(inject, key).enumerable) :  Object.keys(inject)
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i]
-    const provideKey = inject[key].from
-    let source = vm
-    while (source) {
-      if (source._provided && provideKey in source._provided) {
-        res[key] = source._provided[provideKey]
-        break
-      }
-      source = source.$parent
-    }
+export function resolveInject (inject, vm) {
+  if (inject) {
+    // inject is :any because flow is not smart enough to figure out cached
+    const result = Object.create(null)
+    const keys = hasSymbol
+        ? Reflect.ownKeys(inject).filter(key => {
+          /* istanbul ignore next */
+          return Object.getOwnPropertyDescriptor(inject, key).enumerable
+        })
+        : Object.keys(inject)
 
-    if (!source) {
-      if ('default' in inject[key]) {
-        const provideDefault = inject[key].default
-        res[key] = typeof provideDefault === 'function' ? provideDefault.call(vm) : provideDefault
-      } else {
-        console.warn(`Injection "${key}" not found`, vm)
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i]
+      const provideKey = inject[key].from
+      let source = vm
+      while (source) {
+        if (source._provided && provideKey in source._provided) {
+          result[key] = source._provided[provideKey]
+          break
+        }
+        source = source.$parent
+      }
+      if (!source) {
+        if ('default' in inject[key]) {
+          const provideDefault = inject[key].default
+          result[key] = typeof provideDefault === 'function'
+            ? provideDefault.call(vm)
+            : provideDefault
+        } else if ('process.env.NODE_ENV' !== 'production') {
+          warn(`Injection "${key}" not found`, vm)
+        }
       }
     }
+    return result
   }
-  return res
-}
-
-export {
-  initProvide,
-  initInjections,
-  resolveInject
 }
